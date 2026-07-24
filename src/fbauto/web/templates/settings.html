@@ -34,15 +34,74 @@
   <p class="muted">Khuyến nghị dùng <b>Fanpage + Chìa khoá kết nối (Page token)</b> — an toàn, đúng luật.
   Token được lưu <b>cục bộ</b> (Keychain/.env), không gửi đi đâu, không hiển thị lại.</p>
   <form method="post" action="/settings/fb">
-    <label>Page ID</label>
-    <input type="text" name="fb_page_id" value="{{ secrets.fb_page_id }}">
-    <label>Page Access Token {% if fb_token_set %}<span class="muted">(đã có — để trống nếu không đổi)</span>{% endif %}</label>
+    <label>Page ID
+      <span class="tip" tabindex="0" data-tip="Mã số của Fanpage bạn muốn đăng. Lấy ở Bước 5 trong hướng dẫn bên dưới: trong kết quả JSON của /me/accounts, đó là giá trị data[].id.">ⓘ</span>
+    </label>
+    <input type="text" name="fb_page_id" value="{{ secrets.fb_page_id }}"
+           placeholder="VD: 1029384756XXXXX">
+    <label>Page Access Token
+      <span class="tip" tabindex="0" data-tip="Chìa khoá cho phép app đăng bài thay bạn. Lấy ở Bước 5: giá trị data[].access_token. Loại token của Page thường KHÔNG hết hạn. Đây là BÍ MẬT — đừng chia sẻ cho ai.">ⓘ</span>
+      {% if fb_token_set %}<span class="muted">(đã có — để trống nếu không đổi)</span>{% endif %}
+    </label>
     <input type="password" name="fb_page_access_token" placeholder="{{ '••••••••••' if fb_token_set else 'dán token vào đây' }}">
     <p><button class="btn" type="submit">Lưu kết nối Facebook</button></p>
   </form>
   <form method="post" action="/settings/check-fb" class="inline">
     <button class="btn gray" type="submit">🔎 Kiểm tra kết nối Facebook</button>
   </form>
+
+  <details class="guide">
+    <summary>📖 Hướng dẫn tạo app &amp; lấy token — từng bước (cho người mới)</summary>
+    <div class="guide-body">
+      <p>Chỉ đăng được lên <b>Facebook Page (trang)</b> do bạn quản trị — <b>không</b> phải profile
+        cá nhân. Cần: một <b>Page</b> + một <b>Meta App</b>.</p>
+      <ol class="steps">
+        <li>
+          <b>Tạo Meta App:</b> vào
+          <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>
+          → <b>Create App</b> → chọn loại <b>Business</b>.
+        </li>
+        <li>
+          <b>Lấy App ID / App Secret</b> (dùng để gia hạn token): trong app →
+          <b>Settings → Basic</b>.
+        </li>
+        <li>
+          <b>Lấy token thử nghiệm:</b> mở
+          <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noopener">Graph API Explorer</a>
+          → chọn app của bạn → <b>Generate Access Token</b> → cấp các quyền:
+          <div>
+            <span class="perm">pages_show_list</span>
+            <span class="perm">pages_read_engagement</span>
+            <span class="perm">pages_manage_posts</span>
+            <span class="perm">pages_manage_engagement</span>
+            <span class="perm">read_insights</span>
+          </div>
+        </li>
+        <li>
+          <b>Đổi sang token dài hạn (60 ngày)</b> — mở URL sau trên trình duyệt (thay 3 giá trị
+          <code>APP_ID</code>, <code>APP_SECRET</code>, <code>TOKEN_BƯỚC_3</code>):
+          <code class="codebox">https://graph.facebook.com/v20.0/oauth/access_token?grant_type=fb_exchange_token&amp;client_id=APP_ID&amp;client_secret=APP_SECRET&amp;fb_exchange_token=TOKEN_BƯỚC_3</code>
+        </li>
+        <li>
+          <b>Lấy Page ID + Page Token:</b> mở
+          <code class="codebox">https://graph.facebook.com/v20.0/me/accounts?access_token=TOKEN_DÀI_HẠN</code>
+          Trong kết quả JSON: <code>data[].id</code> = <b>Facebook Page ID</b> ·
+          <code>data[].access_token</code> = <b>Page Access Token</b>
+          (loại này thường <b>không hết hạn</b>).
+        </li>
+        <li>
+          <b>Dán 2 giá trị đó</b> vào ô Page ID và Page Access Token bên trên → <b>Lưu</b>.
+          Kiểm tra nhanh: mở
+          <code class="codebox">https://graph.facebook.com/v20.0/me?access_token=PAGE_TOKEN</code>
+          phải trả về <b>tên Page</b> (hoặc bấm nút “🔎 Kiểm tra kết nối Facebook”).
+        </li>
+      </ol>
+      <div class="note">⚠ Muốn app đăng cho Page <b>ngoài</b> tài khoản dev/test → cần qua
+        <b>App Review</b> của Meta cho các quyền trên.</div>
+      <p class="muted">🔒 Bảo mật: token là bí mật cá nhân, chỉ lưu <b>trên máy này</b>. Đừng dán
+        token vào chat, email hay tài liệu chia sẻ.</p>
+    </div>
+  </details>
 </div>
 
 <div class="card">
@@ -54,7 +113,9 @@
         <input type="text" name="timezone" value="{{ cfg.scheduler.timezone }}">
       </div>
       <div>
-        <label>Chế độ đăng</label>
+        <label>Chế độ đăng
+          <span class="tip" tabindex="0" data-tip="Nháp = chỉ chạy thử, KHÔNG đăng thật lên Facebook (an toàn để test). Muốn bài thật sự lên trang, chọn 'Đăng thật lên Facebook'.">ⓘ</span>
+        </label>
         <select name="dry_run">
           <option value="on" {{ 'selected' if cfg.dry_run else '' }}>Nháp (chạy thử, an toàn)</option>
           <option value="off" {{ 'selected' if not cfg.dry_run else '' }}>Đăng thật lên Facebook</option>

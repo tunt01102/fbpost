@@ -11,6 +11,20 @@ from .base import PublishResult, render_post_text
 GRAPH = "https://graph.facebook.com/v20.0"
 
 
+def facebook_permalink(external_id: str | None) -> str | None:
+    """Dựng URL công khai tới bài đã đăng từ external_id do Graph API trả về.
+
+    Graph API trả id dạng ``{page_id}_{story_id}`` (feed) hoặc ``post_id`` (photos).
+    Trả None cho bài dry-run hoặc chưa có id (không phải bài thật trên Facebook).
+    """
+    if not external_id or external_id.startswith("dryrun-"):
+        return None
+    if "_" in external_id:
+        page_id, _, story_id = external_id.partition("_")
+        return f"https://www.facebook.com/{page_id}/posts/{story_id}"
+    return f"https://www.facebook.com/{external_id}"
+
+
 class FacebookPagePublisher:
     """Đăng bài lên Facebook Page. Cần pages_manage_posts + Page access token."""
 
@@ -45,7 +59,11 @@ class FacebookPagePublisher:
         ext = data.get("post_id") or data.get("id")
         if not ext:
             raise RuntimeError(f"Graph API không trả id: {data}")
-        return PublishResult(external_id=str(ext), detail={"platform": "facebook_page"})
+        ext = str(ext)
+        return PublishResult(
+            external_id=ext,
+            detail={"platform": "facebook_page", "url": facebook_permalink(ext)},
+        )
 
     def delete(self, external_id: str) -> None:
         with httpx.Client(timeout=30) as client:

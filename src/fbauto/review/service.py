@@ -123,6 +123,8 @@ def status_counts() -> dict[str, int]:
 
 
 def get_post(post_id: int) -> dict[str, Any]:
+    from ..publishers.facebook_api import facebook_permalink
+
     with session_scope() as session:
         p = _require(session, post_id)
         return {
@@ -133,6 +135,7 @@ def get_post(post_id: int) -> dict[str, Any]:
             "alt_text": p.alt_text, "image_path": p.image_path, "image_prompt": p.image_prompt,
             "citations": p.citations or [], "length": p.length, "tone": p.tone,
             "score": p.score, "review_note": p.review_note, "external_id": p.external_id,
+            "facebook_url": facebook_permalink(p.external_id),
             "topic_title": p.topic.title if p.topic else None,
         }
 
