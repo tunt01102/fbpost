@@ -18,5 +18,5 @@ uv sync
 echo "==> Khởi tạo cơ sở dữ liệu..."
 uv run fbauto init-db
 
-echo "==> Mở giao diện tại http://localhost:8000 ..."
+echo "==> Mở giao diện tại http://localhost:8791 ..."
 uv run fbauto serve

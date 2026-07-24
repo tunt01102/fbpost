@@ -47,6 +47,10 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI idiom: gọi File()/Form() trong default của tham số là chuẩn, không phải bug.
+extend-immutable-calls = ["fastapi.File", "fastapi.Form"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

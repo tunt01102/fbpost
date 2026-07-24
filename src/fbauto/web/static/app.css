@@ -95,3 +95,57 @@ th, td { text-align:left; padding:10px; border-bottom:1px solid var(--border); v
 .tabs a.active { background:var(--brand); color:#fff; }
 .inline { display:inline; }
 ul.log { list-style:none; padding-left:0; color:var(--muted); }
+
+/* Tooltip trợ giúp (ⓘ) */
+.tip {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:18px; height:18px; border-radius:50%; background:var(--brand); color:#fff;
+  font-size:12px; font-weight:700; cursor:help; position:relative; margin-left:4px;
+  vertical-align:middle;
+}
+.tip::after {
+  content: attr(data-tip); position:absolute; left:50%; top:135%; transform:translateX(-50%);
+  background:#1c1e21; color:#fff; padding:9px 11px; border-radius:8px;
+  font-size:13px; font-weight:400; line-height:1.45; width:min(280px, 70vw);
+  white-space:normal; text-align:left; z-index:30; opacity:0; pointer-events:none;
+  transition:opacity .15s; box-shadow:0 6px 18px rgba(0,0,0,.22);
+}
+.tip:hover::after, .tip:focus::after { opacity:1; }
+
+/* Nút chọn ảnh từ máy (mở hộp thoại file) */
+.file-btn { position:relative; overflow:hidden; cursor:pointer; }
+.file-btn input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; }
+.img-preview { margin:10px 0; }
+.img-preview img {
+  max-width:100%; max-height:280px; border-radius:10px; border:1px solid var(--border);
+  display:block;
+}
+.img-preview .cap { font-size:13px; word-break:break-all; margin-top:4px; }
+
+/* Hướng dẫn từng bước (guide) */
+details.guide { margin-top:12px; border:1px solid var(--border); border-radius:10px; padding:0; }
+details.guide > summary {
+  cursor:pointer; padding:12px 14px; font-weight:600; list-style:none; user-select:none;
+  background:#f7f8fa; border-radius:10px;
+}
+details.guide[open] > summary { border-bottom:1px solid var(--border); border-radius:10px 10px 0 0; }
+details.guide > summary::-webkit-details-marker { display:none; }
+.guide-body { padding:14px 16px; }
+.steps { list-style:none; counter-reset:step; padding-left:0; margin:0; }
+.steps > li {
+  position:relative; padding:12px 0 12px 44px; border-bottom:1px dashed var(--border);
+}
+.steps > li:last-child { border-bottom:none; }
+.steps > li::before {
+  counter-increment:step; content:counter(step);
+  position:absolute; left:0; top:12px; width:28px; height:28px; border-radius:50%;
+  background:var(--brand); color:#fff; font-weight:700; display:flex;
+  align-items:center; justify-content:center; font-size:14px;
+}
+.codebox {
+  display:block; background:#0f1115; color:#e6edf3; padding:10px 12px; border-radius:8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px;
+  white-space:pre-wrap; word-break:break-all; margin:6px 0; line-height:1.5;
+}
+.perm { background:#eef3ff; color:#1553b3; border-radius:6px; padding:1px 6px; font-size:13px;
+  font-family:ui-monospace, Menlo, monospace; display:inline-block; margin:2px 2px 0 0; }

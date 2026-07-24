@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -33,6 +33,10 @@ from . import jobs
 
 _HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(_HERE / "templates"))
+
+# Ảnh cho phép đính kèm (upload từ máy người dùng).
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+_MAX_IMAGE_BYTES = 15 * 1024 * 1024  # 15MB
 
 
 def _tz() -> ZoneInfo:
@@ -157,6 +161,7 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             "request": request, "post": post,
             "editable": review.is_editable_status(post["status"]),
             "tz": get_config().scheduler.timezone,
+            "dry_run": get_config().dry_run,
         })
 
     @app.post("/review/{post_id}/edit")
@@ -173,6 +178,62 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         review.edit(post_id, hook=hook, body=body, hashtags=tags, cta=cta,
                     alt_text=alt_text, image_path=image_path)
         return RedirectResponse(f"/review/{post_id}", status_code=303)
+
+    @app.post("/review/{post_id}/upload-image")
+    async def review_upload_image(post_id: int, image: UploadFile = File(...)):
+        """Nhận ảnh upload từ máy người dùng → lưu vào thư mục ảnh → gán vào bài.
+
+        Tránh việc người dùng phải tự gõ đường dẫn file (họ thường không biết cách lấy).
+        """
+        from ..config import get_config, resolve_path
+
+        # Kiểm tra bài có cho sửa không TRƯỚC khi ghi file (tránh để lại file mồ côi).
+        post = review.get_post(post_id)
+        if not review.is_editable_status(post["status"]):
+            notify("error", f"Bài #{post_id} đã ở trạng thái "
+                            f"{STATUS_LABELS_VI.get(post['status'], post['status'])} — "
+                            f"không đính kèm ảnh được nữa.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
+        if not image or not image.filename:
+            notify("warning", "Chưa chọn ảnh.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
+        suffix = Path(image.filename).suffix.lower()
+        if suffix not in _IMAGE_EXTS:
+            notify("error", f"File không phải ảnh hợp lệ ({suffix or 'không rõ'}). "
+                            f"Chỉ nhận: {', '.join(sorted(_IMAGE_EXTS))}")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
+        data = await image.read()
+        if len(data) > _MAX_IMAGE_BYTES:
+            notify("error", "Ảnh quá lớn (tối đa 15MB).")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
+        img_dir = resolve_path(get_config().image_dir)
+        img_dir.mkdir(parents=True, exist_ok=True)
+        dest = img_dir / f"post{post_id}{suffix}"
+        dest.write_bytes(data)
+        try:
+            review.edit(post_id, image_path=str(dest))
+            notify("info", f"Đã đính kèm ảnh cho bài #{post_id}.")
+        except ValueError as exc:
+            notify("error", str(exc))
+        return RedirectResponse(f"/review/{post_id}", status_code=303)
+
+    @app.post("/review/{post_id}/remove-image")
+    def review_remove_image(post_id: int):
+        try:
+            review.edit(post_id, image_path="")
+            notify("info", f"Đã gỡ ảnh khỏi bài #{post_id}.")
+        except ValueError as exc:
+            notify("error", str(exc))
+        return RedirectResponse(f"/review/{post_id}", status_code=303)
+
+    @app.get("/review/{post_id}/image")
+    def review_image(post_id: int):
+        """Phục vụ ảnh đã đính kèm của bài (chỉ đúng file đường dẫn lưu trong bài)."""
+        post = review.get_post(post_id)
+        path = post.get("image_path")
+        if not path or not Path(path).exists():
+            return JSONResponse({"error": "no image"}, status_code=404)
+        return FileResponse(path)
 
     @app.post("/review/{post_id}/ai-rewrite")
     def review_ai_rewrite(post_id: int, feedback: str = Form(...)):
@@ -207,10 +268,13 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         try:
             result = sched.publish_post(post_id, dry_run=dry)
             if result.dry_run:
-                notify("info", f"[Nháp] Đã 'đăng' thử bài #{post_id} (chưa đăng thật — đang bật "
-                               f"chế độ nháp trong Cài đặt).")
+                notify("warning", f"⚠️ CHƯA đăng thật bài #{post_id}. Đang bật chế độ NHÁP "
+                                  f"(dry-run) trong Cài đặt — tắt để đăng thật lên Facebook.")
             else:
-                notify("info", f"✅ Đã đăng bài #{post_id} (mã: {result.external_id}).")
+                url = result.detail.get("url")
+                link = f" Xem bài: {url}" if url else ""
+                notify("info", f"✅ Đã đăng bài #{post_id} lên Facebook (mã: {result.external_id})."
+                               f"{link}")
         except Exception as exc:  # noqa: BLE001
             notify("error", f"❌ Đăng bài #{post_id} lỗi: {exc}")
         return RedirectResponse(f"/review/{post_id}", status_code=303)

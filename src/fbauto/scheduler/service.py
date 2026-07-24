@@ -66,6 +66,16 @@ def publish_post(
         notify("error", f"Đăng bài #{post_id} thất bại: {exc}")
         raise
 
+    # Dry-run: KHÔNG chạm trạng thái bài. Nếu đặt external_id + PUBLISHED ở đây thì lần
+    # đăng THẬT sau này sẽ bị chặn bởi cơ chế chống trùng → bài không bao giờ lên Facebook.
+    if result.dry_run:
+        with session_scope() as s:
+            s.add(PostLog(
+                post_id=post_id, event="dry_run",
+                detail={"external_id": result.external_id, "dry_run": True},
+            ))
+        return result
+
     with session_scope() as s:
         done = s.get(Post, post_id)
         if done is None:
@@ -75,7 +85,8 @@ def publish_post(
         done.published_at = _now()
         s.add(PostLog(
             post_id=post_id, event="published",
-            detail={"external_id": result.external_id, "dry_run": result.dry_run},
+            detail={"external_id": result.external_id, "dry_run": result.dry_run,
+                    "url": result.detail.get("url")},
         ))
     return result
 

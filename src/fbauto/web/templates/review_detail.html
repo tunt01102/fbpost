@@ -31,6 +31,25 @@
   <div>
     {% if editable %}
     <h3>Chỉnh sửa</h3>
+
+    <label>Ảnh đính kèm
+      <span class="tip" tabindex="0" data-tip="Bấm 'Chọn ảnh từ máy' để mở thư mục và chọn file ảnh — không cần tự gõ đường dẫn. Ảnh sẽ đăng kèm bài lên Facebook.">ⓘ</span>
+    </label>
+    <form method="post" action="/review/{{ post.id }}/upload-image" enctype="multipart/form-data">
+      <span class="btn gray file-btn">📁 Chọn ảnh từ máy…
+        <input type="file" name="image" accept="image/*" onchange="this.form.submit()">
+      </span>
+    </form>
+    {% if post.image_path %}
+    <div class="img-preview">
+      <img src="/review/{{ post.id }}/image?v={{ post.id }}" alt="ảnh đính kèm">
+      <div class="cap muted">✅ Đã đính kèm: {{ post.image_path }}</div>
+    </div>
+    <form method="post" action="/review/{{ post.id }}/remove-image">
+      <button class="btn gray" type="submit">🗑️ Gỡ ảnh</button>
+    </form>
+    {% endif %}
+
     <form method="post" action="/review/{{ post.id }}/edit">
       <label>Hook (dòng đầu)</label>
       <input type="text" name="hook" value="{{ post.hook or '' }}">
@@ -40,8 +59,7 @@
       <input type="text" name="hashtags" value="{{ post.hashtags|join(' ') }}">
       <label>Lời kêu gọi (CTA)</label>
       <input type="text" name="cta" value="{{ post.cta or '' }}">
-      <label>Ảnh đính kèm (đường dẫn file trên máy — tuỳ chọn)</label>
-      <input type="text" name="image_path" value="{{ post.image_path or '' }}">
+      <input type="hidden" name="image_path" value="{{ post.image_path or '' }}">
       <input type="hidden" name="alt_text" value="{{ post.alt_text or '' }}">
       <p><button class="btn" type="submit">💾 Lưu chỉnh sửa</button></p>
     </form>
@@ -74,7 +92,10 @@
     {% else %}
     <div class="ok">Bài đã ở trạng thái <b>{{ STATUS_LABELS_VI.get(post.status, post.status) }}</b>
       nên không sửa được nữa.</div>
-    {% if post.external_id %}<p class="muted">Mã bài đã đăng: {{ post.external_id }}</p>{% endif %}
+    {% if post.facebook_url %}
+    <p><a class="btn" href="{{ post.facebook_url }}" target="_blank" rel="noopener">🔗 Xem bài trên Facebook</a></p>
+    <p class="muted">Mã bài: {{ post.external_id }}</p>
+    {% elif post.external_id %}<p class="muted">Mã bài đã đăng: {{ post.external_id }}</p>{% endif %}
     {% endif %}
 
     <hr>
@@ -100,8 +121,12 @@
     </form>
 
     <hr>
+    {% if dry_run %}
+    <div class="note">⚠️ Đang bật chế độ <b>NHÁP (dry-run)</b> — bấm "Đăng ngay" sẽ KHÔNG
+      đăng thật lên Facebook. Vào <a href="/settings">Cài đặt</a> tắt chế độ nháp để đăng thật.</div>
+    {% endif %}
     <form method="post" action="/review/{{ post.id }}/publish-now"
-          onsubmit="return confirm('Đăng bài này NGAY bây giờ?');">
+          onsubmit="return confirm({% if dry_run %}'Chế độ NHÁP đang bật — đây chỉ là đăng thử, KHÔNG lên Facebook. Tiếp tục?'{% else %}'Đăng bài này NGAY lên Facebook?'{% endif %});">
       <button class="btn" type="submit">🚀 Đăng ngay</button>
     </form>
   </div>
