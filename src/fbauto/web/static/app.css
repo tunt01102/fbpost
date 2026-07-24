@@ -1,0 +1,97 @@
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --ink: #1c1e21;
+  --muted: #65676b;
+  --brand: #1877f2;
+  --brand-dark: #166fe5;
+  --green: #31a24c;
+  --amber: #f0a020;
+  --red: #e41e3f;
+  --border: #dddfe2;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px; line-height: 1.5;
+}
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+header.topbar {
+  background: var(--brand); color: #fff; padding: 10px 16px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 10;
+}
+header.topbar .logo { font-weight: 700; font-size: 18px; }
+header.topbar nav { display: flex; gap: 14px; flex-wrap: wrap; }
+header.topbar nav a { color: #fff; opacity: .9; font-weight: 500; }
+header.topbar nav a:hover { opacity: 1; text-decoration: none; }
+main { max-width: 960px; margin: 20px auto; padding: 0 16px; }
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+}
+h1 { font-size: 24px; margin: 6px 0 16px; }
+h2 { font-size: 19px; margin: 4px 0 12px; }
+h3 { font-size: 16px; margin: 4px 0 8px; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+label { display: block; font-weight: 600; margin: 12px 0 4px; }
+input[type=text], input[type=password], input[type=number], input[type=datetime-local],
+input[type=time], select, textarea {
+  width: 100%; padding: 10px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 15px; font-family: inherit;
+}
+textarea { min-height: 120px; resize: vertical; }
+.btn {
+  display: inline-block; background: var(--brand); color: #fff; border: none;
+  padding: 10px 18px; border-radius: 8px; font-size: 15px; font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover { background: var(--brand-dark); text-decoration: none; }
+.btn.big { font-size: 18px; padding: 14px 26px; }
+.btn.gray { background: #e4e6eb; color: var(--ink); }
+.btn.green { background: var(--green); }
+.btn.red { background: var(--red); }
+.btn.amber { background: var(--amber); }
+.pill {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+}
+.pill.draft { background:#e4e6eb; color:#333; }
+.pill.needs_review { background:#fff3cd; color:#8a6100; }
+.pill.approved { background:#d7f7de; color:#1a7a34; }
+.pill.scheduled { background:#dbe9ff; color:#1553b3; }
+.pill.published { background:#31a24c; color:#fff; }
+.pill.rejected { background:#f0d0d5; color:#8a1626; }
+.pill.failed { background:#e41e3f; color:#fff; }
+.stat { text-align:center; padding:14px; }
+.stat .num { font-size: 28px; font-weight: 700; }
+.stat .lbl { color: var(--muted); font-size: 14px; }
+.light { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; }
+.light.on { background: var(--green); }
+.light.off { background: var(--red); }
+.note { background:#fff8e6; border:1px solid #f0d98a; padding:10px 12px; border-radius:8px; }
+.warn { background:#fdecea; border:1px solid #f5c6cb; padding:10px 12px; border-radius:8px; }
+.ok { background:#eaf7ee; border:1px solid #bfe4c9; padding:10px 12px; border-radius:8px; }
+/* Xem trước giống Facebook */
+.fb-preview { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff; }
+.fb-preview .head { display:flex; gap:10px; align-items:center; padding:12px; }
+.fb-preview .avatar { width:40px; height:40px; border-radius:50%; background:var(--brand); }
+.fb-preview .page-name { font-weight:700; }
+.fb-preview .sub { color:var(--muted); font-size:13px; }
+.fb-preview .content { padding:0 12px 12px; white-space:pre-wrap; word-break:break-word; }
+.fb-preview .hashtags { color:var(--brand); }
+.fb-preview .actions { display:flex; justify-content:space-around; border-top:1px solid var(--border);
+  padding:8px 0; color:var(--muted); font-weight:600; }
+table { width:100%; border-collapse: collapse; }
+th, td { text-align:left; padding:10px; border-bottom:1px solid var(--border); vertical-align:top; }
+.tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.tabs a { padding:6px 12px; border-radius:999px; background:#e4e6eb; color:var(--ink); }
+.tabs a.active { background:var(--brand); color:#fff; }
+.inline { display:inline; }
+ul.log { list-style:none; padding-left:0; color:var(--muted); }

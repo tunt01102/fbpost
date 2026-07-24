@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:center;">
+  <h1>Chào mừng! 👋</h1>
+  <p class="muted">Nhập chủ đề → AI viết bài → bạn duyệt → hẹn giờ đăng lên Facebook.</p>
+  <a class="btn big" href="/create">➕ Tạo bài mới</a>
+</div>
+
+{% if cfg.dry_run %}
+<div class="note">🧪 Đang bật <b>chế độ nháp</b>: các thao tác "đăng" chỉ chạy thử, <b>chưa
+đăng thật</b> lên Facebook. Muốn đăng thật, vào <a href="/settings">Cài đặt</a> tắt chế độ nháp.</div>
+{% endif %}
+{% if cfg.pause_all_schedules %}
+<div class="warn">⏸️ Bạn đang <b>tạm dừng tất cả lịch đăng</b>. Không bài nào tự đăng cho tới khi bật lại.</div>
+{% endif %}
+
+<div class="card">
+  <h2>Tổng quan</h2>
+  <div class="row">
+    {% for st, lbl in STATUS_LABELS_VI.items() %}
+    <div class="stat card" style="flex:1; min-width:110px; margin:0;">
+      <div class="num">{{ counts.get(st, 0) }}</div>
+      <div class="lbl"><span class="pill {{ st }}">{{ lbl }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+  <p style="margin-top:12px;">
+    <a class="btn gray" href="/review?status=needs_review">Xem bài chờ duyệt</a>
+    <a class="btn gray" href="/review?status=scheduled">Bài đã lên lịch</a>
+    <a class="btn gray" href="/review?status=published">Bài đã đăng</a>
+  </p>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>Trạng thái kết nối</h2>
+    <p><span class="light {{ 'on' if diag.ai_ready else 'off' }}"></span>
+      Kết nối AI viết bài
+      {% if diag.ai_ready %}(sẵn sàng — provider: {{ diag.provider }}){% else %}
+      (<a href="/settings">cần cài &amp; đăng nhập CLI</a>){% endif %}</p>
+    <ul class="log">
+      <li>Claude CLI: {{ '✅' if diag.ai.claude_cli else '—' }}</li>
+      <li>Gemini CLI: {{ '✅' if diag.ai.gemini_cli else '—' }}</li>
+      <li>ChatGPT Codex CLI: {{ '✅' if diag.ai.codex_cli else '—' }}</li>
+    </ul>
+    <p><span class="light {{ 'on' if diag.fb_page_configured else 'off' }}"></span>
+      Kết nối Facebook (Fanpage)
+      {% if diag.fb_page_configured %}(đã cấu hình){% else %}
+      (<a href="/settings">cần nhập Page ID + token</a>){% endif %}</p>
+  </div>
+  <div class="card">
+    <h2>Thông báo gần đây</h2>
+    {% if notifications %}
+    <ul class="log">
+      {% for n in notifications %}
+      <li>{{ n.ts|dt }} — {{ n.message }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">Chưa có thông báo.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt{% endblock %}
+{% block content %}
+<h1>Cài đặt</h1>
+{% if msg %}<div class="{{ 'ok' if 'OK' in msg else 'warn' }}">
+  Kết quả kiểm tra {{ 'AI' if checked=='ai' else 'Facebook' }}: {{ msg }}</div>{% endif %}
+
+<div class="card">
+  <h2>1. Kết nối AI viết bài</h2>
+  <p class="muted">Chọn 1 trong 3 công cụ (chỉ cần 1). Bạn <b>không cần API key</b> — app dùng tài
+  khoản AI bạn đã trả phí hằng tháng qua CLI chính hãng.</p>
+  <ul class="log">
+    <li>Claude CLI: {{ '✅ đã cài' if diag.ai.claude_cli else '❌ chưa cài' }}</li>
+    <li>Gemini CLI: {{ '✅ đã cài' if diag.ai.gemini_cli else '❌ chưa cài' }}</li>
+    <li>ChatGPT Codex CLI: {{ '✅ đã cài' if diag.ai.codex_cli else '❌ chưa cài' }}</li>
+  </ul>
+  <form method="post" action="/settings/ai">
+    <label>Nhà cung cấp AI đang dùng</label>
+    <select name="provider">
+      {% for p in ['claude_cli','gemini_cli','codex_cli','local','claude','openai','gemini'] %}
+      <option value="{{ p }}" {{ 'selected' if secrets.llm_provider==p else '' }}>{{ p }}</option>
+      {% endfor %}
+    </select>
+    <p><button class="btn" type="submit">Lưu</button></p>
+  </form>
+  <form method="post" action="/settings/check-ai" class="inline">
+    <button class="btn gray" type="submit">🔎 Kiểm tra kết nối AI</button>
+  </form>
+  <p class="muted">Hướng dẫn cài chi tiết ở trang <a href="/help">Hướng dẫn</a>.</p>
+</div>
+
+<div class="card">
+  <h2>2. Kết nối Facebook (Fanpage)</h2>
+  <p class="muted">Khuyến nghị dùng <b>Fanpage + Chìa khoá kết nối (Page token)</b> — an toàn, đúng luật.
+  Token được lưu <b>cục bộ</b> (Keychain/.env), không gửi đi đâu, không hiển thị lại.</p>
+  <form method="post" action="/settings/fb">
+    <label>Page ID</label>
+    <input type="text" name="fb_page_id" value="{{ secrets.fb_page_id }}">
+    <label>Page Access Token {% if fb_token_set %}<span class="muted">(đã có — để trống nếu không đổi)</span>{% endif %}</label>
+    <input type="password" name="fb_page_access_token" placeholder="{{ '••••••••••' if fb_token_set else 'dán token vào đây' }}">
+    <p><button class="btn" type="submit">Lưu kết nối Facebook</button></p>
+  </form>
+  <form method="post" action="/settings/check-fb" class="inline">
+    <button class="btn gray" type="submit">🔎 Kiểm tra kết nối Facebook</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>3. Cài đặt chung</h2>
+  <form method="post" action="/settings/general">
+    <div class="grid2">
+      <div>
+        <label>Múi giờ</label>
+        <input type="text" name="timezone" value="{{ cfg.scheduler.timezone }}">
+      </div>
+      <div>
+        <label>Chế độ đăng</label>
+        <select name="dry_run">
+          <option value="on" {{ 'selected' if cfg.dry_run else '' }}>Nháp (chạy thử, an toàn)</option>
+          <option value="off" {{ 'selected' if not cfg.dry_run else '' }}>Đăng thật lên Facebook</option>
+        </select>
+      </div>
+      <div>
+        <label>Giãn cách tối thiểu giữa 2 bài (giờ)</label>
+        <input type="number" name="min_hours" value="{{ cfg.scheduler.min_hours_between_posts }}" min="0">
+      </div>
+      <div>
+        <label>Tối đa số bài/ngày</label>
+        <input type="number" name="max_per_day" value="{{ cfg.scheduler.max_posts_per_day_per_platform }}" min="0">
+      </div>
+    </div>
+    <label>Chủ đề mặc định (điền sẵn khi tạo bài)</label>
+    <input type="text" name="default_topic" value="{{ default_topic }}">
+    <label>Mô tả thương hiệu mặc định</label>
+    <textarea name="brand_hint">{{ brand_hint }}</textarea>
+    <p><button class="btn" type="submit">💾 Lưu cài đặt chung</button></p>
+  </form>
+</div>
+{% endblock %}

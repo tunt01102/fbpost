@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Đang viết bài…{% endblock %}
+{% block content %}
+<div class="card" style="text-align:center;">
+  <h1>✍️ AI đang viết bài cho bạn…</h1>
+  <p id="stage" style="font-size:18px;">Đang chuẩn bị…</p>
+  <div class="muted"><ul class="log" id="log" style="text-align:left; max-width:520px; margin:0 auto;"></ul></div>
+  <div id="done" style="display:none;"></div>
+  <div id="err" class="warn" style="display:none; text-align:left;"></div>
+</div>
+<script>
+const jobId = "{{ job_id }}";
+async function poll() {
+  try {
+    const r = await fetch(`/api/job/${jobId}`);
+    const d = await r.json();
+    document.getElementById("stage").textContent = d.stage || "";
+    const log = document.getElementById("log");
+    log.innerHTML = (d.log || []).map(x => `<li>${x}</li>`).join("");
+    if (d.status === "done") {
+      document.getElementById("done").style.display = "block";
+      document.getElementById("done").innerHTML =
+        `<a class="btn big green" href="/review/${d.post_id}">👀 Xem &amp; duyệt bài</a>`;
+      return;
+    }
+    if (d.status === "error") {
+      const e = document.getElementById("err");
+      e.style.display = "block";
+      e.innerHTML = `❌ ${d.error || "Lỗi không rõ"}<br><a href="/create">Thử lại</a> hoặc kiểm tra <a href="/settings">Cài đặt → Kết nối AI</a>.`;
+      return;
+    }
+    setTimeout(poll, 1200);
+  } catch (e) { setTimeout(poll, 2000); }
+}
+poll();
+</script>
+{% endblock %}

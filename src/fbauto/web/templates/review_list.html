@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Duyệt & Sửa{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Duyệt &amp; Sửa bài</h1>
+  <div class="tabs">
+    {% for st, lbl in STATUS_LABELS_VI.items() %}
+    <a href="/review?status={{ st }}" class="{{ 'active' if status == st else '' }}">
+      {{ lbl }} ({{ counts.get(st, 0) }})</a>
+    {% endfor %}
+  </div>
+  <form method="get" action="/review" class="row">
+    <input type="hidden" name="status" value="{{ status }}">
+    <input type="text" name="q" value="{{ q }}" placeholder="Tìm trong bài…" style="flex:1;">
+    <button class="btn gray" type="submit">Tìm</button>
+  </form>
+</div>
+
+<div class="card">
+  {% if posts %}
+  <table>
+    <thead><tr><th>Hook</th><th>Chủ đề</th><th>Điểm</th><th>Trạng thái</th><th>Thời gian</th><th></th></tr></thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>{{ (p.hook or p.topic_title or "(không tiêu đề)")[:70] }}
+          {% if p.needs_attention %}<br><span class="muted">⚠️ có ghi chú cần xem</span>{% endif %}</td>
+        <td>{{ p.topic_title or "—" }}</td>
+        <td>{{ p.score if p.score is not none else "—" }}</td>
+        <td><span class="pill {{ p.status }}">{{ STATUS_LABELS_VI.get(p.status, p.status) }}</span>
+          {% if p.scheduled_at %}<br><span class="muted">{{ p.scheduled_at|dt }}</span>{% endif %}</td>
+        <td class="muted">{{ p.created_at|dt }}</td>
+        <td><a class="btn gray" href="/review/{{ p.id }}">Mở</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Chưa có bài nào ở mục này. <a href="/create">Tạo bài mới</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

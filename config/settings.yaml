@@ -1,0 +1,25 @@
+db_url: sqlite:///data/app.sqlite
+image_dir: data/images
+pause_all_schedules: false
+dry_run: true          # true = chạy thử (không đăng thật). Đổi false để đăng thật lên Facebook.
+
+llm:
+  # Model cho provider claude / claude_cli (đổi tuỳ tài khoản)
+  draft_model: claude-opus-4-8
+  cheap_model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+  thinking_enabled: true
+  gemini_draft_model: gemini-flash-latest
+  gemini_cheap_model: gemini-flash-lite-latest
+  # Provider chính lỗi → tự thử lần lượt (chỉ dùng cái khả dụng)
+  fallback_providers: [gemini_cli, codex_cli, local]
+
+review:
+  require_human_approval: true   # BẮT BUỘC người duyệt (an toàn) — không tự đăng khi chưa duyệt
+  autogate_min_score: 70
+
+scheduler:
+  timezone: Asia/Ho_Chi_Minh
+  min_hours_between_posts: 6
+  max_posts_per_day_per_platform: 3
+  misfire_grace_seconds: 3600    # bài lỡ quá lâu → không tự đăng bù (tránh đăng bài lỗi thời)

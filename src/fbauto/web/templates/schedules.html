@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Lịch đăng{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Lịch đăng</h1>
+  <form method="post" action="/schedules/pause-all" class="inline">
+    {% if cfg.pause_all_schedules %}
+    <button class="btn green" type="submit">▶️ Bật lại tất cả lịch đăng</button>
+    <span class="pill failed">Đang tạm dừng</span>
+    {% else %}
+    <button class="btn red" type="submit">⏸️ Tạm dừng tất cả lịch đăng</button>
+    {% endif %}
+  </form>
+  {% if cfg.dry_run %}<span class="pill draft">Chế độ nháp</span>{% endif %}
+</div>
+
+<div class="card">
+  {% if schedules %}
+  <table>
+    <thead><tr><th>#</th><th>Kiểu</th><th>Nền tảng</th><th>Bài</th><th>Khi nào</th>
+      <th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+      {% for s in schedules %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ kind_labels.get(s.kind, s.kind) }}</td>
+        <td>{{ PLATFORM_LABELS_VI.get(s.platform, s.platform) }}</td>
+        <td>{% if s.post_id %}<a href="/review/{{ s.post_id }}">Bài #{{ s.post_id }}</a>
+            {% else %}(bài kế trong hàng chờ){% endif %}</td>
+        <td>
+          {% if s.kind == 'once' %}{{ s.next_run_at|dt }}
+          {% elif s.kind == 'weekly' %}Thứ {{ (s.weekday or 0) + 2 }} lúc {{ s.time_of_day or '09:00' }}
+          {% elif s.kind == 'daily' %}Mỗi ngày lúc {{ s.time_of_day or '09:00' }}
+          {% else %}{{ s.cron }}{% endif %}
+        </td>
+        <td>{% if s.enabled %}<span class="pill approved">Bật</span>
+            {% else %}<span class="pill draft">Tắt</span>{% endif %}</td>
+        <td>
+          <form method="post" action="/schedules/{{ s.id }}/toggle" class="inline">
+            <button class="btn gray" type="submit">{{ 'Tắt' if s.enabled else 'Bật' }}</button></form>
+          <form method="post" action="/schedules/{{ s.id }}/delete" class="inline"
+                onsubmit="return confirm('Xoá lịch này?');">
+            <button class="btn red" type="submit">Xoá</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Chưa có lịch nào. Mở một bài đã duyệt trong <a href="/review">Duyệt &amp; Sửa</a>
+    và bấm "Hẹn giờ đăng".</p>
+  {% endif %}
+</div>
+<div class="note">🛡️ Mặc định app <b>không tự đăng khi chưa duyệt</b>. Bài đã lên lịch sẽ tự đăng
+đúng giờ (theo múi giờ trong Cài đặt), có kiểm tra chống trùng &amp; chống spam.</div>
+{% endblock %}

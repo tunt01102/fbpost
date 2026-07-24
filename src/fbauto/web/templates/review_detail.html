@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Duyệt bài #{{ post.id }}{% endblock %}
+{% block content %}
+<p><a href="/review">← Về danh sách</a></p>
+<h1>Bài #{{ post.id }}
+  <span class="pill {{ post.status }}">{{ STATUS_LABELS_VI.get(post.status, post.status) }}</span></h1>
+{% if post.review_note %}<div class="note">📝 {{ post.review_note }}</div>{% endif %}
+
+<div class="grid2">
+  <!-- TRÁI: xem trước giống Facebook -->
+  <div>
+    <h3>Xem trước (giống Facebook)</h3>
+    <div class="fb-preview">
+      <div class="head">
+        <div class="avatar"></div>
+        <div><div class="page-name">Trang của bạn</div>
+          <div class="sub">Vừa xong · 🌐</div></div>
+      </div>
+      <div class="content">{{ post.body }}{% if post.cta %}
+
+{{ post.cta }}{% endif %}
+{% if post.hashtags %}
+<span class="hashtags">{% for t in post.hashtags %}#{{ t }} {% endfor %}</span>{% endif %}</div>
+      <div class="actions"><span>👍 Thích</span><span>💬 Bình luận</span><span>↪️ Chia sẻ</span></div>
+    </div>
+    {% if post.image_prompt %}<p class="muted">🖼️ Gợi ý ảnh: {{ post.image_prompt }}</p>{% endif %}
+    {% if post.image_path %}<p class="muted">Ảnh đính kèm: {{ post.image_path }}</p>{% endif %}
+  </div>
+
+  <!-- PHẢI: sửa + hành động -->
+  <div>
+    {% if editable %}
+    <h3>Chỉnh sửa</h3>
+    <form method="post" action="/review/{{ post.id }}/edit">
+      <label>Hook (dòng đầu)</label>
+      <input type="text" name="hook" value="{{ post.hook or '' }}">
+      <label>Nội dung</label>
+      <textarea name="body" required>{{ post.body }}</textarea>
+      <label>Hashtag (cách nhau bởi dấu cách)</label>
+      <input type="text" name="hashtags" value="{{ post.hashtags|join(' ') }}">
+      <label>Lời kêu gọi (CTA)</label>
+      <input type="text" name="cta" value="{{ post.cta or '' }}">
+      <label>Ảnh đính kèm (đường dẫn file trên máy — tuỳ chọn)</label>
+      <input type="text" name="image_path" value="{{ post.image_path or '' }}">
+      <input type="hidden" name="alt_text" value="{{ post.alt_text or '' }}">
+      <p><button class="btn" type="submit">💾 Lưu chỉnh sửa</button></p>
+    </form>
+
+    <h3>✨ Nhờ AI viết lại theo góp ý</h3>
+    <form method="post" action="/review/{{ post.id }}/ai-rewrite">
+      <input type="text" name="feedback" required
+             placeholder="VD: ngắn gọn hơn, thêm emoji, đổi giọng vui hơn, nhấn mạnh ưu đãi">
+      <p class="row">
+        <button class="btn amber" type="submit">✨ AI viết lại</button>
+        {% if post.previous_body %}
+        <a class="btn gray" href="#" onclick="event.preventDefault();document.getElementById('revert').submit();">↩︎ Quay lại bản trước</a>
+        {% endif %}
+      </p>
+    </form>
+    {% if post.previous_body %}
+    <form id="revert" method="post" action="/review/{{ post.id }}/revert"></form>
+    {% endif %}
+
+    <hr>
+    <h3>Quyết định</h3>
+    <form method="post" action="/review/{{ post.id }}/approve" class="inline">
+      <button class="btn green" type="submit">✅ Duyệt</button>
+    </form>
+    <form method="post" action="/review/{{ post.id }}/reject" class="inline"
+          onsubmit="return confirm('Bỏ bài này?');">
+      <button class="btn red" type="submit">🗑️ Bỏ</button>
+    </form>
+
+    {% else %}
+    <div class="ok">Bài đã ở trạng thái <b>{{ STATUS_LABELS_VI.get(post.status, post.status) }}</b>
+      nên không sửa được nữa.</div>
+    {% if post.external_id %}<p class="muted">Mã bài đã đăng: {{ post.external_id }}</p>{% endif %}
+    {% endif %}
+
+    <hr>
+    <h3>⏰ Hẹn giờ đăng</h3>
+    <form method="post" action="/review/{{ post.id }}/schedule">
+      <label>Kiểu lịch</label>
+      <select name="kind" onchange="document.getElementById('once').style.display=this.value=='once'?'block':'none';document.getElementById('recur').style.display=(this.value=='daily'||this.value=='weekly')?'block':'none';">
+        <option value="once">Một lần (chọn ngày giờ)</option>
+        <option value="daily">Hằng ngày</option>
+        <option value="weekly">Hằng tuần</option>
+      </select>
+      <div id="once">
+        <label>Thời điểm đăng ({{ tz }})</label>
+        <input type="datetime-local" name="run_at">
+      </div>
+      <div id="recur" style="display:none;">
+        <label>Giờ đăng (HH:MM)</label>
+        <input type="time" name="time_of_day" value="09:00">
+        <label>Thứ trong tuần (chỉ cho lịch tuần: 0=T2 … 6=CN)</label>
+        <input type="number" name="weekday" min="0" max="6" value="0">
+      </div>
+      <p><button class="btn" type="submit">⏰ Lên lịch</button></p>
+    </form>
+
+    <hr>
+    <form method="post" action="/review/{{ post.id }}/publish-now"
+          onsubmit="return confirm('Đăng bài này NGAY bây giờ?');">
+      <button class="btn" type="submit">🚀 Đăng ngay</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

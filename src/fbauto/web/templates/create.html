@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Tạo bài mới{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>➕ Tạo bài mới</h1>
+  <p class="muted">Nhập chủ đề bạn muốn viết, chọn giọng văn, rồi để AI viết giúp bạn.</p>
+  <form method="post" action="/create">
+    <label>Chủ đề muốn viết *</label>
+    <input type="text" name="title" required
+           placeholder="VD: khuyến mãi cà phê mùa hè, mua 1 tặng 1 cuối tuần"
+           value="{{ default_topic }}">
+
+    <label>Mô tả thương hiệu / giọng riêng (tuỳ chọn)</label>
+    <textarea name="brand_hint" placeholder="VD: Quán cà phê nhỏ ở Đà Lạt, phong cách trẻ trung, thân thiện">{{ default_brand }}</textarea>
+
+    <div class="grid2">
+      <div>
+        <label>Giọng văn</label>
+        <select name="tone">
+          <option value="professional">Chuyên nghiệp</option>
+          <option value="sharing" selected>Thân thiện / chia sẻ</option>
+          <option value="fun">Hài hước</option>
+        </select>
+      </div>
+      <div>
+        <label>Độ dài</label>
+        <select name="length">
+          <option value="short">Ngắn gọn</option>
+          <option value="medium" selected>Vừa phải</option>
+          <option value="long">Chi tiết</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" name="language" value="vi">
+    <p style="margin-top:18px;"><button class="btn big" type="submit">✍️ Nhờ AI viết</button></p>
+  </form>
+</div>
+<div class="note">💡 AI viết bằng tài khoản ChatGPT/Gemini/Claude bạn <b>đã trả phí hằng tháng</b> —
+không nhập thẻ, không tính tiền theo lượt. Bài viết ra luôn cần <b>bạn duyệt</b> trước khi đăng.</div>
+{% endblock %}

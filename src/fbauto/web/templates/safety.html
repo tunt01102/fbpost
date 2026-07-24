@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Cam kết an toàn{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>🛡️ Cam kết an toàn</h1>
+  <h3>Có an toàn với Facebook không?</h3>
+  <p>Có. App ưu tiên đăng qua <b>Fanpage bằng Graph API</b> — đường <b>chính hãng</b> của Facebook.
+  Mặc định <b>bạn duyệt trước khi đăng</b>, và app <b>giới hạn tần suất</b> để không giống spam.</p>
+
+  <h3>Có tốn thêm tiền không?</h3>
+  <p>Không tính tiền theo lượt. App dùng gói AI (ChatGPT/Gemini/Claude) <b>bạn đã trả hằng tháng</b>,
+  không nhập thẻ, không dùng API tính phí.</p>
+
+  <h3>Dữ liệu của tôi lưu ở đâu?</h3>
+  <p>Toàn bộ lưu <b>trên máy bạn</b> (file SQLite trong thư mục <code>data/</code>).
+  Token/mật khẩu không gửi đi đâu, không đưa vào công cụ AI, không hiển thị lại đầy đủ.</p>
+
+  <div class="warn">
+    <b>Lưu ý về rủi ro:</b> Tự động hoá <b>trang cá nhân</b> hoặc dùng trình duyệt tự động có thể
+    vi phạm điều khoản Facebook và dẫn tới khoá tài khoản. Hãy ưu tiên <b>Fanpage + Graph API</b>,
+    đăng với tần suất thấp và giờ tự nhiên.
+  </div>
+  <p><a class="btn" href="/create">Bắt đầu tạo bài</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Hướng dẫn{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>📖 Hướng dẫn cho người không rành IT</h1>
+
+  <h2>A. Kết nối AI viết bài (chọn 1 trong 3)</h2>
+  <p><b>ChatGPT (gói Plus/Pro):</b> cài <b>Codex CLI</b> của OpenAI, mở terminal gõ
+  <code>codex</code> và đăng nhập bằng "Sign in with ChatGPT". Sau đó vào Cài đặt chọn provider
+  <code>codex_cli</code> → bấm "Kiểm tra kết nối AI".</p>
+  <p><b>Gemini (tài khoản Google):</b> cài <b>Gemini CLI</b>, gõ <code>gemini</code> để đăng nhập
+  Google. Chọn provider <code>gemini_cli</code>.</p>
+  <p><b>Claude (gói Pro/Max):</b> cài <b>Claude CLI</b>, gõ <code>claude</code> để đăng nhập.
+  Chọn provider <code>claude_cli</code>.</p>
+  <p class="note">Bạn <b>không cần API key</b> hay nhập thẻ. App chỉ "mượn" tài khoản AI bạn đã
+  trả tiền hằng tháng để viết bài giúp bạn.</p>
+
+  <h2>B. Lấy Chìa khoá kết nối Facebook (Fanpage) — khuyến nghị</h2>
+  <ol>
+    <li>Bạn phải là <b>Quản trị viên</b> của Fanpage.</li>
+    <li>Vào <b>developers.facebook.com/apps</b> → Create App → chọn <b>Business</b>.</li>
+    <li>Mở <b>Graph API Explorer</b> → chọn app → Generate Access Token → tick các quyền:
+      <code>pages_show_list</code>, <code>pages_read_engagement</code>,
+      <code>pages_manage_posts</code>.</li>
+    <li>Đổi sang <b>token dài hạn</b>, lấy <b>Page ID</b> + <b>Page Token</b>.</li>
+    <li>Dán vào <a href="/settings">Cài đặt → Kết nối Facebook</a> → bấm "Kiểm tra".</li>
+  </ol>
+  <p class="warn">Token là bí mật — app lưu an toàn trong máy bạn, không gửi đi đâu, không hiển thị
+  lại đầy đủ. Token Page thường hết hạn ~60 ngày, cần gia hạn lại.</p>
+
+  <h2>C. Đăng bằng trình duyệt (tùy chọn, rủi ro hơn)</h2>
+  <p>Chỉ dùng khi hiểu rõ rủi ro ToS. Cần cài thêm: <code>pip install "fbauto[browser]"</code> rồi
+  <code>playwright install chromium</code>, và đăng nhập một lần để lưu phiên.</p>
+</div>
+{% endblock %}
