@@ -1,4 +1,4 @@
-"""FastAPI app: giao diện web tiếng Việt cho FB Auto Poster (chạy tại http://localhost:8000)."""
+"""FastAPI app: giao diện web tiếng Việt cho FB Auto Poster (mặc định http://localhost:8791)."""
 
 from __future__ import annotations
 

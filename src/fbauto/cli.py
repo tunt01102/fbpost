@@ -22,10 +22,10 @@ def init_db_cmd() -> None:
 @app.command()
 def serve(
     host: str = "127.0.0.1",
-    port: int = 8000,
+    port: int = 8791,  # port ít dùng (tránh 8000 hay bị app khác chiếm); đổi bằng --port
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Tự mở trình duyệt"),
 ) -> None:
-    """Chạy web server (giao diện tại http://localhost:8000)."""
+    """Chạy web server (mặc định http://localhost:8791; đổi bằng --port)."""
     import threading
     import webbrowser
 

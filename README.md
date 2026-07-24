@@ -15,7 +15,7 @@ lên Facebook Fanpage**. AI viết bằng **CLI subscription chính hãng** (Cha
 ```bash
 uv sync
 uv run fbauto init-db
-uv run fbauto serve         # mở http://localhost:8000
+uv run fbauto serve         # mở http://localhost:8791 (đổi port: --port 8642)
 ```
 
 ## Kết nối
