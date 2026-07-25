@@ -1,32 +1,125 @@
 {% extends "base.html" %}
 {% block title %}Cài đặt{% endblock %}
 {% block content %}
+{% set agy_cfg = cfg.llm.antigravity_cli|default(none) %}
 <h1>Cài đặt</h1>
 {% if msg %}<div class="{{ 'ok' if 'OK' in msg else 'warn' }}">
   Kết quả kiểm tra {{ 'AI' if checked=='ai' else 'Facebook' }}: {{ msg }}</div>{% endif %}
 
 <div class="card">
   <h2>1. Kết nối AI viết bài</h2>
-  <p class="muted">Chọn 1 trong 3 công cụ (chỉ cần 1). Bạn <b>không cần API key</b> — app dùng tài
-  khoản AI bạn đã trả phí hằng tháng qua CLI chính hãng.</p>
+  <p class="muted">Không cần API key. App gọi công cụ dòng lệnh chính hãng và dùng phiên đăng
+    nhập đã lưu cục bộ trên máy.</p>
   <ul class="log">
+    <li>Google Antigravity CLI (AI Ultra): {{ '✅ đã cài' if diag.ai.antigravity_cli else '❌ chưa cài' }}</li>
+    <li>Đăng nhập Google cho Antigravity:
+      {{ '✅ đã thiết lập' if diag.antigravity_setup_complete else '⚠️ chưa xác nhận' }}</li>
     <li>Claude CLI: {{ '✅ đã cài' if diag.ai.claude_cli else '❌ chưa cài' }}</li>
-    <li>Gemini CLI: {{ '✅ đã cài' if diag.ai.gemini_cli else '❌ chưa cài' }}</li>
+    <li>Gemini CLI cũ (Enterprise/API): {{ '✅ đã cài' if diag.ai.gemini_cli else '❌ chưa cài' }}</li>
     <li>ChatGPT Codex CLI: {{ '✅ đã cài' if diag.ai.codex_cli else '❌ chưa cài' }}</li>
   </ul>
   <form method="post" action="/settings/ai">
     <label>Nhà cung cấp AI đang dùng</label>
     <select name="provider">
-      {% for p in ['claude_cli','gemini_cli','codex_cli','local','claude','openai','gemini'] %}
-      <option value="{{ p }}" {{ 'selected' if secrets.llm_provider==p else '' }}>{{ p }}</option>
-      {% endfor %}
+      <option value="antigravity_cli" {{ 'selected' if secrets.llm_provider=='antigravity_cli' else '' }}>
+        Google AI Ultra — Antigravity CLI (khuyên dùng)
+      </option>
+      <option value="claude_cli" {{ 'selected' if secrets.llm_provider=='claude_cli' else '' }}>Claude CLI</option>
+      <option value="codex_cli" {{ 'selected' if secrets.llm_provider=='codex_cli' else '' }}>ChatGPT Codex CLI</option>
+      <option value="gemini_cli" {{ 'selected' if secrets.llm_provider=='gemini_cli' else '' }}>Gemini CLI cũ — chỉ Enterprise/API</option>
+      <option value="local" {{ 'selected' if secrets.llm_provider=='local' else '' }}>Model local</option>
     </select>
-    <p><button class="btn" type="submit">Lưu</button></p>
+
+    <fieldset class="config-box">
+      <legend>Cấu hình Google AI Ultra</legend>
+      <div class="grid2">
+        <div>
+          <label>Model viết bài
+            <span class="tip" tabindex="0" data-tip="Để trống là Auto: Antigravity tự chọn model tốt nhất mà tài khoản Ultra của bạn được cấp. Chỉ nhập đúng tên/slug hiện trong lệnh “agy models”.">ⓘ</span>
+          </label>
+          <input type="text" name="antigravity_model"
+                 value="{{ agy_cfg.draft_model if agy_cfg else '' }}"
+                 placeholder="Để trống = Auto (khuyên dùng)">
+        </div>
+        <div>
+          <label>Model tác vụ phụ</label>
+          <input type="text" name="antigravity_cheap_model"
+                 value="{{ agy_cfg.cheap_model if agy_cfg else '' }}"
+                 placeholder="Để trống = giống model viết bài">
+        </div>
+        <div>
+          <label>Thời gian chờ tối đa (giây)</label>
+          <input type="number" name="antigravity_timeout"
+                 value="{{ agy_cfg.timeout_seconds if agy_cfg else 300 }}" min="30" max="900">
+        </div>
+      </div>
+      <p class="muted">“Google AI Ultra” là gói thuê bao. Tên model thay đổi theo đợt phát hành;
+        chạy <code>agy models</code> để xem model tài khoản đang được dùng.</p>
+    </fieldset>
+
+    <p><button class="btn" type="submit">💾 Lưu cấu hình &amp; đăng nhập nếu cần</button></p>
   </form>
   <form method="post" action="/settings/check-ai" class="inline">
     <button class="btn gray" type="submit">🔎 Kiểm tra kết nối AI</button>
   </form>
-  <p class="muted">Hướng dẫn cài chi tiết ở trang <a href="/help">Hướng dẫn</a>.</p>
+  <form method="post" action="/settings/antigravity-login" class="inline">
+    <button class="btn green" type="submit">🔐 Đăng nhập lại Google AI Ultra</button>
+  </form>
+  <p class="muted">Nút đăng nhập có thể mở trình duyệt và mất vài phút. App chỉ nhận kết quả
+    thành công/thất bại; credential do Antigravity lưu trong keyring.</p>
+
+  <details class="guide">
+    <summary>📖 Cài Google AI Ultra không API key — từng bước</summary>
+    <div class="guide-body">
+      <div class="note"><b>Lưu ý từ 18/06/2026:</b> Google đã chuyển tài khoản cá nhân
+        Free/AI Pro/AI Ultra từ Gemini CLI sang <b>Antigravity CLI</b>. Không chọn
+        <code>gemini_cli</code> cho tài khoản Ultra cá nhân.</div>
+      <ol class="steps">
+        <li>
+          <b>Kiểm tra gói:</b> đăng nhập đúng tài khoản Google đang có gói
+          <b>Google AI Ultra</b>. Gói Ultra là quyền truy cập, không phải tên model
+          <code>gemini-ultra</code>.
+        </li>
+        <li>
+          <b>Cài Antigravity CLI.</b><br>
+          macOS/Linux:
+          <code class="codebox">curl -fsSL https://antigravity.google/cli/install.sh | bash</code>
+          Windows PowerShell:
+          <code class="codebox">irm https://antigravity.google/cli/install.ps1 | iex</code>
+          Chỉ chạy lệnh sau khi bạn đã kiểm tra tên miền là <code>antigravity.google</code>.
+        </li>
+        <li>
+          <b>Đăng nhập một lần:</b> mở Terminal/PowerShell, chạy
+          <code class="codebox">agy</code>
+          Trình duyệt sẽ mở. Chọn đúng tài khoản Google AI Ultra và hoàn tất đăng nhập.
+          Phiên đăng nhập được CLI lưu trong keyring của hệ điều hành; app không đọc mật khẩu.
+        </li>
+        <li>
+          <b>Xem model được cấp:</b> thoát màn hình tương tác rồi chạy
+          <code class="codebox">agy models</code>
+          Khuyên dùng để trống ô “Model viết bài” (Auto). Nếu muốn ghim model, sao chép đúng
+          model slug/tên mà lệnh trên hiển thị; đừng tự nhập <code>gemini-ultra</code>.
+        </li>
+        <li>
+          <b>Cấu hình app:</b> chọn “Google AI Ultra — Antigravity CLI”, để model trống,
+          bấm <b>Lưu cấu hình AI</b>, rồi bấm <b>Kiểm tra kết nối AI</b>.
+        </li>
+        <li>
+          <b>Tạo bài thử:</b> vào <a href="/create">Tạo bài</a>, nhập một chủ đề ngắn.
+          App gọi <code>agy -p ...</code> ở chế độ không tương tác và dùng phiên Google đã lưu,
+          hoàn toàn không cần biến <code>GEMINI_API_KEY</code>.
+        </li>
+      </ol>
+      <div class="warn"><b>Nếu lỗi:</b> chạy lại <code>agy</code> để đăng nhập; kiểm tra
+        <code>agy models</code>; nếu Terminal báo không tìm thấy lệnh, đóng/mở lại Terminal
+        sau khi cài. Hạn mức và model phụ thuộc gói/tài khoản Google.</div>
+      <p class="muted">Tài liệu chính thức:
+        <a href="https://antigravity.google/docs/cli-overview" target="_blank" rel="noopener">Antigravity CLI</a>
+        · <a href="https://github.com/google-gemini/gemini-cli/discussions/28017"
+             target="_blank" rel="noopener">thông báo chuyển đổi ngày 18/06/2026</a>.
+      </p>
+    </div>
+  </details>
 </div>
 
 <div class="card">

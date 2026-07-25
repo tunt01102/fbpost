@@ -13,6 +13,22 @@ def test_build_cli_cmd_gemini_substitution():
     assert "xin chào" in cmd
 
 
+def test_build_cli_cmd_antigravity_ultra():
+    cfg = get_config().llm.antigravity_cli
+    cmd = LLM()._build_cli_cmd(cfg, "viết bài Facebook", "gemini-3.1-pro-high")
+    assert cmd[0].endswith("agy") or cmd[0] == "agy"
+    assert "--model" in cmd
+    assert "gemini-3.1-pro-high" in cmd
+    assert "-p" in cmd
+    assert "viết bài Facebook" in cmd
+
+
+def test_build_cli_cmd_antigravity_auto_omits_model():
+    cfg = get_config().llm.antigravity_cli
+    cmd = LLM()._build_cli_cmd(cfg, "prompt", "")
+    assert "--model" not in cmd
+
+
 def test_build_cli_cmd_omits_model_when_empty():
     cfg = get_config().llm.gemini_cli
     cmd = LLM()._build_cli_cmd(cfg, "prompt", "")

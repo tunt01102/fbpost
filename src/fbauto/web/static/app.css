@@ -149,3 +149,7 @@ details.guide > summary::-webkit-details-marker { display:none; }
 }
 .perm { background:#eef3ff; color:#1553b3; border-radius:6px; padding:1px 6px; font-size:13px;
   font-family:ui-monospace, Menlo, monospace; display:inline-block; margin:2px 2px 0 0; }
+.config-box {
+  border:1px solid var(--border); border-radius:10px; padding:4px 14px 14px; margin-top:16px;
+}
+.config-box legend { font-weight:700; padding:0 7px; }

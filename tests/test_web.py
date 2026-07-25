@@ -151,10 +151,65 @@ def test_upload_rejects_non_image(client, monkeypatch):
 
 def test_settings_guide_present(client):
     html = client.get("/settings").text
+    assert "Google AI Ultra — Antigravity CLI" in html
+    assert "agy models" in html
+    assert "18/06/2026" in html
     assert "Hướng dẫn tạo app" in html
     assert "pages_manage_posts" in html
     assert "graph.facebook.com/v20.0/me/accounts" in html
     assert 'class="tip"' in html  # tooltip ⓘ có mặt
+
+
+def test_settings_template_survives_old_running_config(client, monkeypatch):
+    """Template mới không được 500 nếu tiến trình cũ chưa có antigravity_cli."""
+    from types import SimpleNamespace
+
+    from fbauto.config import get_config
+
+    old_cfg = get_config().model_copy(deep=True)
+    old_cfg.llm = SimpleNamespace()  # mô phỏng model cấu hình của tiến trình trước nâng cấp
+    monkeypatch.setattr("fbauto.web.app.get_config", lambda: old_cfg)
+    monkeypatch.setattr("fbauto.web.app.service.diagnostics", lambda: {
+        "ai": {"claude_cli": False, "gemini_cli": False, "codex_cli": False},
+    })
+    r = client.get("/settings")
+    assert r.status_code == 200
+    assert 'name="antigravity_timeout"' in r.text
+    assert 'value="300"' in r.text
+
+
+def test_save_antigravity_settings(client, monkeypatch):
+    saved = {}
+    monkeypatch.setattr("fbauto.web.app.save_config", lambda cfg: saved.update(
+        model=cfg.llm.antigravity_cli.draft_model,
+        cheap=cfg.llm.antigravity_cli.cheap_model,
+        timeout=cfg.llm.antigravity_cli.timeout_seconds,
+    ))
+    monkeypatch.setattr("fbauto.env_writer.update_env", lambda values: saved.update(values))
+    monkeypatch.setattr("fbauto.web.app.reload_secrets", lambda: None)
+
+    r = client.post("/settings/ai", data={
+        "provider": "antigravity_cli",
+        "antigravity_model": "gemini-3.1-pro-high",
+        "antigravity_cheap_model": "",
+        "antigravity_timeout": "420",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert saved["model"] == "gemini-3.1-pro-high"
+    assert saved["cheap"] == "gemini-3.1-pro-high"
+    assert saved["timeout"] == 420
+    assert saved["LLM_PROVIDER"] == "antigravity_cli"
+
+
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_antigravity_login_route_accepts_button_and_direct_url(client, monkeypatch, method):
+    monkeypatch.setattr(
+        "fbauto.antigravity_setup.setup_antigravity",
+        lambda force=False: {"ok": True, "output": "OK"},
+    )
+    r = getattr(client, method)("/settings/antigravity-login", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"].startswith("/settings?checked=ai")
 
 
 # --- helpers ---------------------------------------------------------- #

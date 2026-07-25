@@ -217,8 +217,11 @@ def diagnostics() -> dict[str, Any]:
 
     cfg = get_config()
     s = get_secrets()
+    from .antigravity_setup import is_setup_complete
+
     ai = {
         "claude_cli": shutil.which(cfg.llm.claude_cli.binary) is not None,
+        "antigravity_cli": shutil.which(cfg.llm.antigravity_cli.binary) is not None,
         "gemini_cli": shutil.which(cfg.llm.gemini_cli.binary) is not None,
         "codex_cli": shutil.which(cfg.llm.codex_cli.binary) is not None,
         "local": bool(s.local_llm_base_url),
@@ -227,6 +230,7 @@ def diagnostics() -> dict[str, Any]:
     return {
         "provider": s.llm_provider,
         "ai": ai,
+        "antigravity_setup_complete": is_setup_complete(),
         "ai_ready": any(ai.values()),
         "fb_page_configured": fb_page,
         "dry_run": cfg.dry_run,

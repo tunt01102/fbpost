@@ -1,6 +1,6 @@
-"""Adapter LLM đa nhà cung cấp: Claude / OpenAI (ChatGPT) / Gemini / model local + CLI subscription.
+"""Adapter LLM đa nhà cung cấp: Claude / OpenAI / Gemini / local + CLI subscription.
 
-TRÁI TIM "KHÔNG API": provider claude_cli / gemini_cli / codex_cli gọi CLI chính hãng
+TRÁI TIM "KHÔNG API": antigravity_cli / claude_cli / gemini_cli / codex_cli gọi CLI chính hãng
 (đăng nhập bằng subscription, KHÔNG API key, cost 0) qua subprocess. Interface
 complete()/parse()/chat() không đổi nên generator/editor không cần biết provider nào.
 Client tạo lười; có thể inject `client` để test (chỉ dùng cho Claude API).
@@ -27,7 +27,7 @@ R = TypeVar("R")
 
 # Provider chạy qua CLI subscription tổng quát (đăng nhập CLI, không API key, cost 0).
 # claude_cli giữ đường riêng (dùng --system-prompt); các provider này gộp system vào prompt.
-_CLI_PROVIDERS = ("gemini_cli", "codex_cli")
+_CLI_PROVIDERS = ("antigravity_cli", "gemini_cli", "codex_cli")
 
 
 def _record_usage(provider: str, model: str | None, resp: Any) -> None:
@@ -311,7 +311,7 @@ class LLM:
         return self._claude_cli_text(system, "\n\n".join(parts), model)
 
     # ------------------------------------------------------------------ #
-    # CLI subscription tổng quát (gemini_cli / codex_cli) — không API key, cost 0
+    # CLI subscription tổng quát (Antigravity / Gemini Enterprise / Codex)
     # ------------------------------------------------------------------ #
     def _cli_cfg(self, prov: str) -> Any:
         return getattr(get_config().llm, prov)

@@ -33,7 +33,7 @@ class Secrets(BaseSettings):
         extra="ignore",
     )
 
-    # LLM provider: claude_cli | gemini_cli | codex_cli | local | claude | openai | gemini
+    # LLM provider: antigravity_cli | claude_cli | gemini_cli | codex_cli | ...
     #  - *_cli: qua SUBSCRIPTION (đăng nhập CLI, KHÔNG API key, cost 0) — mặc định
     #  - claude/openai/gemini: SDK API (cần key, tính phí) — chỉ dùng làm fallback nâng cao
     llm_provider: str = "claude_cli"
@@ -89,6 +89,20 @@ def _gemini_cli_default() -> CliProviderConfig:
     )
 
 
+def _antigravity_cli_default() -> CliProviderConfig:
+    """Google Antigravity CLI cho tài khoản Google AI Pro/Ultra cá nhân.
+
+    Từ 18/06/2026, Google chuyển tài khoản cá nhân khỏi Gemini CLI sang `agy`.
+    Model rỗng nghĩa là để Antigravity tự chọn model tốt nhất tài khoản được cấp.
+    """
+    return CliProviderConfig(
+        binary="agy",
+        model_args=["--model", "{model}"],
+        prompt_args=["-p", "{prompt}"],
+        timeout_seconds=300,
+    )
+
+
 def _codex_cli_default() -> CliProviderConfig:
     # `codex exec -m <model> "<system>\n\n<user>"` (Sign in with ChatGPT — Plus/Pro, không API key)
     return CliProviderConfig(
@@ -109,6 +123,7 @@ class LLMConfig(BaseModel):
     # Khi provider chính lỗi → tự thử lần lượt các provider này (nếu khả dụng).
     fallback_providers: list[str] = Field(default_factory=lambda: ["local"])
     claude_cli: ClaudeCliConfig = Field(default_factory=ClaudeCliConfig)
+    antigravity_cli: CliProviderConfig = Field(default_factory=_antigravity_cli_default)
     gemini_cli: CliProviderConfig = Field(default_factory=_gemini_cli_default)
     codex_cli: CliProviderConfig = Field(default_factory=_codex_cli_default)
 

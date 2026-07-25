@@ -358,12 +358,45 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         })
 
     @app.post("/settings/ai")
-    def settings_ai(provider: str = Form(...)):
+    def settings_ai(
+        provider: str = Form(...),
+        antigravity_model: str = Form(""),
+        antigravity_cheap_model: str = Form(""),
+        antigravity_timeout: int = Form(300),
+    ):
         from ..env_writer import update_env
 
+        allowed = {
+            "antigravity_cli", "claude_cli", "gemini_cli", "codex_cli",
+            "local", "claude", "openai", "gemini",
+        }
+        if provider not in allowed:
+            notify("error", f"Nhà cung cấp AI không hợp lệ: {provider}")
+            return RedirectResponse("/settings", status_code=303)
+
+        cfg = get_config()
+        cfg.llm.antigravity_cli.draft_model = antigravity_model.strip()
+        cfg.llm.antigravity_cli.cheap_model = (
+            antigravity_cheap_model.strip() or antigravity_model.strip()
+        )
+        cfg.llm.antigravity_cli.timeout_seconds = max(30, min(900, antigravity_timeout))
+        save_config(cfg)
         update_env({"LLM_PROVIDER": provider})
         reload_secrets()
-        notify("info", f"Đã đặt nhà cung cấp AI: {provider}")
+        label = "Google AI Ultra qua Antigravity CLI" if provider == "antigravity_cli" else provider
+        if provider == "antigravity_cli":
+            from ..antigravity_setup import setup_antigravity
+
+            setup = setup_antigravity()
+            if setup["ok"]:
+                notify("info", f"Đã lưu cấu hình và xác nhận đăng nhập: {label}")
+            else:
+                notify(
+                    "warning",
+                    f"Đã lưu cấu hình {label}, nhưng chưa đăng nhập được: {setup['error']}",
+                )
+        else:
+            notify("info", f"Đã lưu cấu hình AI: {label}")
         return RedirectResponse("/settings", status_code=303)
 
     @app.post("/settings/fb")
@@ -413,6 +446,18 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             msg = f"OK — AI trả lời: {out.strip()[:120]}"
         except Exception as exc:  # noqa: BLE001
             msg = f"LỖI: {str(exc)[:200]}"
+        return RedirectResponse(f"/settings?checked=ai&msg={msg}", status_code=303)
+
+    @app.api_route("/settings/antigravity-login", methods=["GET", "POST"])
+    def antigravity_login():
+        """Cho phép cả nút POST và mở URL trực tiếp trên trình duyệt local."""
+        from ..antigravity_setup import setup_antigravity
+
+        result = setup_antigravity(force=True)
+        if result["ok"]:
+            msg = "OK — Đã đăng nhập Google và chọn antigravity_cli"
+        else:
+            msg = f"LỖI: {result['error']}"[:220]
         return RedirectResponse(f"/settings?checked=ai&msg={msg}", status_code=303)
 
     @app.post("/settings/check-fb")

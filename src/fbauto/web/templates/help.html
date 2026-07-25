@@ -4,16 +4,32 @@
 <div class="card">
   <h1>📖 Hướng dẫn cho người không rành IT</h1>
 
-  <h2>A. Kết nối AI viết bài (chọn 1 trong 3)</h2>
+  <h2>A. Google AI Ultra không API key (khuyên dùng)</h2>
+  <p><b>Google AI Ultra là tên gói thuê bao, không phải tên model.</b> Từ 18/06/2026,
+    tài khoản cá nhân AI Pro/Ultra dùng <b>Antigravity CLI</b> thay cho Gemini CLI.</p>
+  <ol>
+    <li>macOS/Linux, cài bằng
+      <code>curl -fsSL https://antigravity.google/cli/install.sh | bash</code>.
+      Windows PowerShell dùng
+      <code>irm https://antigravity.google/cli/install.ps1 | iex</code>.</li>
+    <li>Chạy <code>agy</code> và đăng nhập bằng đúng tài khoản có AI Ultra.</li>
+    <li>Chạy <code>agy models</code> nếu muốn xem model đang được cấp.</li>
+    <li>Vào <a href="/settings">Cài đặt</a>, chọn
+      <b>Google AI Ultra — Antigravity CLI</b>. Nên để model trống để dùng Auto.</li>
+    <li>Bấm <b>Kiểm tra kết nối AI</b>, rồi tạo một bài thử.</li>
+  </ol>
+  <p class="note">App chạy chế độ chính thức <code>agy -p</code> và dùng phiên Google lưu trong
+    keyring của máy. App không nhận mật khẩu, cookie hay API key. Hạn mức/model phụ thuộc gói Google.</p>
+
+  <h2>A2. Các AI khác</h2>
   <p><b>ChatGPT (gói Plus/Pro):</b> cài <b>Codex CLI</b> của OpenAI, mở terminal gõ
   <code>codex</code> và đăng nhập bằng "Sign in with ChatGPT". Sau đó vào Cài đặt chọn provider
   <code>codex_cli</code> → bấm "Kiểm tra kết nối AI".</p>
-  <p><b>Gemini (tài khoản Google):</b> cài <b>Gemini CLI</b>, gõ <code>gemini</code> để đăng nhập
-  Google. Chọn provider <code>gemini_cli</code>.</p>
+  <p><b>Gemini CLI cũ:</b> chỉ giữ cho tài khoản Enterprise hoặc cách xác thực API được Google
+    tiếp tục hỗ trợ; tài khoản Ultra cá nhân không chọn mục này.</p>
   <p><b>Claude (gói Pro/Max):</b> cài <b>Claude CLI</b>, gõ <code>claude</code> để đăng nhập.
   Chọn provider <code>claude_cli</code>.</p>
-  <p class="note">Bạn <b>không cần API key</b> hay nhập thẻ. App chỉ "mượn" tài khoản AI bạn đã
-  trả tiền hằng tháng để viết bài giúp bạn.</p>
+  <p class="note">Với các provider CLI, bạn không nhập API key vào app.</p>
 
   <h2>B. Lấy Chìa khoá kết nối Facebook (Fanpage) — khuyến nghị</h2>
   <ol>

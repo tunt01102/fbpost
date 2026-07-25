@@ -75,6 +75,22 @@ def check_ai() -> None:
         raise typer.Exit(1) from exc
 
 
+@app.command("setup-antigravity")
+def setup_antigravity_cmd(
+    force: bool = typer.Option(False, "--force", help="Đăng nhập/kiểm tra lại dù đã thiết lập"),
+) -> None:
+    """Đăng nhập Google bằng Antigravity CLI và chọn provider cho app."""
+    from .antigravity_setup import setup_antigravity
+
+    rprint("[cyan]Đang mở Google Sign-In cho Antigravity...[/cyan]")
+    result = setup_antigravity(force=force)
+    if not result["ok"]:
+        rprint(f"[red]✗ Không thiết lập được Antigravity:[/red] {result['error']}")
+        raise typer.Exit(1)
+    state = "đã được cấu hình trước đó" if result.get("already") else "đăng nhập thành công"
+    rprint(f"[green]✓ Antigravity {state}.[/green] Provider: antigravity_cli")
+
+
 @app.command("check-fb")
 def check_fb() -> None:
     """Kiểm tra kết nối Facebook Fanpage (Graph API)."""

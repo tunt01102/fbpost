@@ -12,7 +12,18 @@ llm:
   gemini_draft_model: gemini-flash-latest
   gemini_cheap_model: gemini-flash-lite-latest
   # Provider chính lỗi → tự thử lần lượt (chỉ dùng cái khả dụng)
-  fallback_providers: [gemini_cli, codex_cli, local]
+  fallback_providers: [antigravity_cli, codex_cli, local]
+
+  antigravity_cli:
+    binary: agy
+    base_args: []
+    model_args: [--model, "{model}"]
+    prompt_args: [-p, "{prompt}"]
+    draft_model: ""       # để trống = Auto theo quyền tài khoản Google AI Ultra
+    cheap_model: ""
+    fold_system: true
+    timeout_seconds: 300
+    extra_args: []
 
 review:
   require_human_approval: true   # BẮT BUỘC người duyệt (an toàn) — không tự đăng khi chưa duyệt
