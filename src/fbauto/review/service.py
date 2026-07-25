@@ -14,7 +14,9 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..db import session_scope
 from ..enums import Platform, PostStatus
-from ..models import AuditLog, Post, Schedule
+from ..models import AuditLog, Post, PostLog, Schedule
+from ..publishers.base import render_post_text
+from ..validation.gates import GateInput, GateResult, run_gates
 
 # Trạng thái được phép duyệt/sửa (chưa ra ngoài)
 _EDITABLE = {PostStatus.DRAFT, PostStatus.NEEDS_REVIEW, PostStatus.REJECTED}
@@ -127,6 +129,30 @@ def get_post(post_id: int) -> dict[str, Any]:
 
     with session_scope() as session:
         p = _require(session, post_id)
+        latest_image = session.scalars(
+            select(PostLog)
+            .where(PostLog.post_id == post_id)
+            .where(PostLog.event.like("image_generation_%"))
+            .order_by(PostLog.created_at.desc(), PostLog.id.desc())
+            .limit(1)
+        ).first()
+        image_status = "idle"
+        image_message = ""
+        if latest_image:
+            image_status = latest_image.event.removeprefix("image_generation_")
+            image_message = (latest_image.detail or {}).get("message", "")
+            if image_status == "started":
+                # In-memory jobs do not survive a restart. A missing lock means interrupted.
+                from ..image_generation import image_locks
+                if not image_locks.running(post_id):
+                    latest_image.event = "image_generation_interrupted"
+                    latest_image.detail = {
+                        "message": "Tác vụ bị gián đoạn khi ứng dụng khởi động lại."
+                    }
+                    image_status = "interrupted"
+                    image_message = latest_image.detail["message"]
+        payload = render_post_text(p)
+        validation = _validate_post_model(p, payload)
         return {
             "id": p.id, "topic_id": p.topic_id, "platform": p.platform.value,
             "language": p.language.value, "status": p.status.value,
@@ -137,7 +163,27 @@ def get_post(post_id: int) -> dict[str, Any]:
             "score": p.score, "review_note": p.review_note, "external_id": p.external_id,
             "facebook_url": facebook_permalink(p.external_id),
             "topic_title": p.topic.title if p.topic else None,
+            "payload": payload, "payload_chars": len(payload),
+            "validation_passed": validation.passed,
+            "validation_reasons": validation.reasons,
+            "validation_warnings": validation.warnings,
+            "image_status": image_status, "image_message": image_message,
         }
+
+
+def _validate_post_model(p: Post, payload: str | None = None) -> GateResult:
+    return run_gates(GateInput(
+        platform=p.platform,
+        body=payload if payload is not None else render_post_text(p),
+        hashtags=list(p.hashtags or []),
+        alt_text=p.alt_text,
+        has_image=bool(p.image_path),
+    ))
+
+
+def validate_post(post_id: int) -> GateResult:
+    with session_scope() as session:
+        return _validate_post_model(_require(session, post_id))
 
 
 def approve(post_id: int, actor: str = "human") -> PostStatus:
@@ -145,6 +191,9 @@ def approve(post_id: int, actor: str = "human") -> PostStatus:
         p = _require(session, post_id)
         if p.status not in _EDITABLE:
             raise ValueError(f"Bài #{post_id} đang ở trạng thái {p.status.value}, không thể duyệt")
+        validation = _validate_post_model(p)
+        if not validation.passed:
+            raise ValueError("Không thể duyệt: " + "; ".join(validation.reasons))
         p.status = PostStatus.APPROVED
         p.review_note = None
         _audit(session, "approve", post_id, actor=actor)
@@ -187,12 +236,14 @@ def edit(
         if p.status not in _EDITABLE:
             raise ValueError(f"Bài #{post_id} ({p.status.value}) không cho phép sửa")
         changed: dict[str, Any] = {}
-        if hook is not None:
-            p.hook = hook
-            changed["hook"] = hook
         if body is not None:
             p.body = body
+            p.hook = next((line.strip() for line in body.splitlines() if line.strip()), "")
             changed["body"] = "(updated)"
+            changed["hook"] = p.hook
+        elif hook is not None:
+            p.hook = hook
+            changed["hook"] = hook
         if hashtags is not None:
             p.hashtags = hashtags
             changed["hashtags"] = hashtags

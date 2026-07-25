@@ -39,7 +39,8 @@ def generate_draft(
     # 1) outline
     notify("outline", "")
     outline: Outline = llm.parse(
-        system, prompts.outline_user(title, language=language), Outline, thinking=thinking
+        system, prompts.outline_user(title, language=language), Outline,
+        model=llm.cheap_model(), thinking=thinking
     )
     if en:
         outline_text = "\n".join([

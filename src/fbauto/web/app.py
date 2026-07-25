@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .. import service
+from ..antigravity_models import model_catalog
 from ..config import get_config, get_secrets, reload_secrets, save_config
 from ..db import init_db
 from ..enums import (
@@ -26,6 +27,7 @@ from ..enums import (
     ScheduleKind,
     ScheduleMode,
 )
+from ..image_generation import image_locks
 from ..observability.notify import notify, recent_notifications
 from ..review import service as review
 from ..scheduler import service as sched
@@ -37,6 +39,20 @@ templates = Jinja2Templates(directory=str(_HERE / "templates"))
 # Ảnh cho phép đính kèm (upload từ máy người dùng).
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
 _MAX_IMAGE_BYTES = 15 * 1024 * 1024  # 15MB
+
+
+def _looks_like_image(data: bytes, suffix: str) -> bool:
+    signatures = {
+        ".png": (b"\x89PNG\r\n\x1a\n",),
+        ".jpg": (b"\xff\xd8\xff",),
+        ".jpeg": (b"\xff\xd8\xff",),
+        ".gif": (b"GIF87a", b"GIF89a"),
+        ".webp": (b"RIFF",),
+        ".bmp": (b"BM",),
+    }
+    if not any(data.startswith(sig) for sig in signatures.get(suffix, ())):
+        return False
+    return suffix != ".webp" or len(data) >= 12 and data[8:12] == b"WEBP"
 
 
 def _tz() -> ZoneInfo:
@@ -105,6 +121,8 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             "request": request,
             "default_topic": service.get_setting("default_topic", ""),
             "default_brand": service.get_setting("brand_hint", ""),
+            "provider": get_secrets().llm_provider,
+            "image_cfg": get_config().image_generation,
         })
 
     @app.post("/create")
@@ -114,6 +132,10 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         tone: str = Form("professional"),
         length: str = Form("medium"),
         language: str = Form("vi"),
+        generate_image: str = Form(""),
+        image_aspect_ratio: str = Form("4:5"),
+        image_style: str = Form("auto"),
+        image_visual_brief: str = Form(""),
     ):
         job_id = jobs.start_generate_job(
             title.strip(),
@@ -121,6 +143,12 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             language=Language(language),
             tone=PostTone(tone),
             length=PostLength(length),
+            generate_image=(
+                generate_image == "on" and get_secrets().llm_provider == "antigravity_cli"
+            ),
+            image_aspect_ratio=image_aspect_ratio,
+            image_style=image_style,
+            image_visual_brief=image_visual_brief[:500],
         )
         return RedirectResponse(f"/generating/{job_id}", status_code=303)
 
@@ -135,7 +163,9 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         job = jobs.get_job(job_id)
         if job is None:
             return JSONResponse({"status": "error", "error": "Không tìm thấy job"}, 404)
-        data = {"status": job.status, "stage": job.stage, "log": job.log[-6:]}
+        data = {"status": job.status, "stage": job.stage, "log": job.log[-6:],
+                "kind": job.kind, "post_id": job.post_id,
+                "image_status": job.image_status}
         if job.status == "done" and job.result:
             data["post_id"] = job.result["post_id"]
         if job.status == "error":
@@ -172,11 +202,12 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         hashtags: str = Form(""),
         cta: str = Form(""),
         alt_text: str = Form(""),
+        image_prompt: str = Form(""),
         image_path: str = Form(""),
     ):
         tags = [t.strip().lstrip("#") for t in hashtags.replace(",", " ").split() if t.strip()]
         review.edit(post_id, hook=hook, body=body, hashtags=tags, cta=cta,
-                    alt_text=alt_text, image_path=image_path)
+                    alt_text=alt_text, image_prompt=image_prompt, image_path=image_path)
         return RedirectResponse(f"/review/{post_id}", status_code=303)
 
     @app.post("/review/{post_id}/upload-image")
@@ -189,6 +220,9 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
 
         # Kiểm tra bài có cho sửa không TRƯỚC khi ghi file (tránh để lại file mồ côi).
         post = review.get_post(post_id)
+        if image_locks.running(post_id):
+            notify("warning", "Ảnh AI đang hoàn tất; vui lòng thử upload lại sau.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
         if not review.is_editable_status(post["status"]):
             notify("error", f"Bài #{post_id} đã ở trạng thái "
                             f"{STATUS_LABELS_VI.get(post['status'], post['status'])} — "
@@ -206,6 +240,9 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
         if len(data) > _MAX_IMAGE_BYTES:
             notify("error", "Ảnh quá lớn (tối đa 15MB).")
             return RedirectResponse(f"/review/{post_id}", status_code=303)
+        if not _looks_like_image(data, suffix):
+            notify("error", "Nội dung file không khớp định dạng ảnh đã chọn.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
         img_dir = resolve_path(get_config().image_dir)
         img_dir.mkdir(parents=True, exist_ok=True)
         dest = img_dir / f"post{post_id}{suffix}"
@@ -219,6 +256,9 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
 
     @app.post("/review/{post_id}/remove-image")
     def review_remove_image(post_id: int):
+        if image_locks.running(post_id):
+            notify("warning", "Ảnh AI đang hoàn tất; chưa thể gỡ ảnh lúc này.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
         try:
             review.edit(post_id, image_path="")
             notify("info", f"Đã gỡ ảnh khỏi bài #{post_id}.")
@@ -243,6 +283,26 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             notify("error", f"AI viết lại bài #{post_id} lỗi: {exc}")
         return RedirectResponse(f"/review/{post_id}", status_code=303)
 
+    @app.post("/review/{post_id}/generate-image")
+    def review_generate_image(
+        post_id: int,
+        image_aspect_ratio: str = Form("4:5"),
+        image_style: str = Form("auto"),
+        image_visual_brief: str = Form(""),
+    ):
+        post = review.get_post(post_id)
+        if get_secrets().llm_provider != "antigravity_cli":
+            notify("error", "Tạo ảnh chỉ khả dụng với Antigravity CLI.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
+        if not review.is_editable_status(post["status"]):
+            notify("error", "Bài không còn ở trạng thái cho phép tạo ảnh.")
+            return RedirectResponse(f"/review/{post_id}", status_code=303)
+        job_id = jobs.start_image_job(
+            post_id, aspect_ratio=image_aspect_ratio, style=image_style,
+            visual_brief=image_visual_brief[:500],
+        )
+        return RedirectResponse(f"/generating/{job_id}", status_code=303)
+
     @app.post("/review/{post_id}/revert")
     def review_revert(post_id: int):
         review.revert_body(post_id)
@@ -250,8 +310,11 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
 
     @app.post("/review/{post_id}/approve")
     def review_approve(post_id: int):
-        review.approve(post_id)
-        notify("info", f"Đã duyệt bài #{post_id}")
+        try:
+            review.approve(post_id)
+            notify("info", f"Đã duyệt bài #{post_id}")
+        except ValueError as exc:
+            notify("error", str(exc))
         return RedirectResponse(f"/review/{post_id}", status_code=303)
 
     @app.post("/review/{post_id}/reject")
@@ -263,7 +326,11 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
     def review_publish_now(post_id: int):
         post = review.get_post(post_id)
         if review.is_editable_status(post["status"]):
-            review.approve(post_id)
+            try:
+                review.approve(post_id)
+            except ValueError as exc:
+                notify("error", str(exc))
+                return RedirectResponse(f"/review/{post_id}", status_code=303)
         dry = get_config().dry_run
         try:
             result = sched.publish_post(post_id, dry_run=dry)
@@ -289,7 +356,11 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
     ):
         post = review.get_post(post_id)
         if review.is_editable_status(post["status"]):
-            review.approve(post_id)
+            try:
+                review.approve(post_id)
+            except ValueError as exc:
+                notify("error", str(exc))
+                return RedirectResponse(f"/review/{post_id}", status_code=303)
         platform = Platform(post["platform"])
         k = ScheduleKind(kind)
         next_run = None
@@ -355,7 +426,19 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             "brand_hint": service.get_setting("brand_hint", ""),
             "checked": checked, "msg": msg,
             "fb_token_set": bool(s.fb_page_access_token),
+            "model_catalog": model_catalog.list_models(),
         })
+
+    @app.get("/api/antigravity/models")
+    def antigravity_models(refresh: int = 0):
+        result = model_catalog.list_models(force_refresh=bool(refresh))
+        cfg = get_config().llm.antigravity_cli
+        return {
+            "models": result.models, "cached": result.cached,
+            "fetched_at": result.fetched_at.isoformat() if result.fetched_at else None,
+            "draft_model": cfg.draft_model, "secondary_model": cfg.cheap_model,
+            "error": result.error,
+        }
 
     @app.post("/settings/ai")
     def settings_ai(
@@ -375,6 +458,14 @@ def create_app(start_scheduler: bool = True) -> FastAPI:
             return RedirectResponse("/settings", status_code=303)
 
         cfg = get_config()
+        catalog = model_catalog.list_models()
+        requested = {m for m in (antigravity_model.strip(),
+                                  antigravity_cheap_model.strip()) if m}
+        # Chỉ từ chối khi đã có catalog đáng tin cậy. Nếu CLI chưa từng trả kết quả,
+        # giữ form sử dụng được (và không biến sự cố tạm thời thành Settings 500).
+        if requested and catalog.models and not requested.issubset(set(catalog.models)):
+            notify("error", "Model không có trong danh sách Antigravity gần nhất.")
+            return RedirectResponse("/settings#ai", status_code=303)
         cfg.llm.antigravity_cli.draft_model = antigravity_model.strip()
         cfg.llm.antigravity_cli.cheap_model = (
             antigravity_cheap_model.strip() or antigravity_model.strip()

@@ -82,3 +82,14 @@ uv run pytest                  # chạy test
 - `scheduler/service.py` — hẹn giờ (APScheduler), idempotent, chống spam, catch-up an toàn.
 - `publishers/` — `facebook_api` (Graph API, khuyến nghị) + `facebook_browser` (Playwright, tùy chọn).
 - `web/` — FastAPI + Jinja2, giao diện tiếng Việt.
+## Model và ảnh Antigravity
+
+Khi chọn `antigravity_cli`, trang Cài đặt tải model động từ `agy models`. Để `Auto`
+(khuyên dùng) nếu muốn Antigravity tự chọn model; model viết bài dùng cho draft/refine,
+model tác vụ phụ dùng cho outline/critique.
+
+Form Tạo bài bật sẵn ảnh minh họa tỷ lệ 4:5. Ảnh được tạo trong thư mục tạm bằng
+`agy --mode accept-edits -p`, kiểm tra định dạng/kích thước rồi mới thay thế nguyên tử.
+Lỗi ảnh không làm mất bài chữ. Trong màn Review có thể sửa prompt/alt text, tải ảnh riêng
+hoặc tạo lại; ảnh hiện tại được giữ nguyên nếu lần tạo mới thất bại. Mọi ảnh vẫn phải qua
+duyệt trước khi lên lịch hoặc đăng.

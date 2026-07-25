@@ -113,7 +113,9 @@ def generate_and_store(
             topic_id=topic_id,
             platform=platform,
             language=language,
-            hook=draft.hook,
+            hook=next(
+                (line.strip() for line in draft.body.splitlines() if line.strip()), draft.hook
+            ),
             body=draft.body,
             draft_body=draft.body,
             hashtags=draft.hashtags,
@@ -172,7 +174,7 @@ def ai_rewrite_post(post_id: int, user_feedback: str, *, llm: LLM | None = None)
     with session_scope() as session:
         p = _require(session, post_id)
         p.previous_body = p.body
-        p.hook = new.hook or p.hook
+        p.hook = next((line.strip() for line in new.body.splitlines() if line.strip()), new.hook)
         p.body = new.body
         if new.hashtags:
             p.hashtags = new.hashtags

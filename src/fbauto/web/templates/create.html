@@ -4,7 +4,7 @@
 <div class="card">
   <h1>➕ Tạo bài mới</h1>
   <p class="muted">Nhập chủ đề bạn muốn viết, chọn giọng văn, rồi để AI viết giúp bạn.</p>
-  <form method="post" action="/create">
+  <form method="post" action="/create" data-dirty-form>
     <label>Chủ đề muốn viết *</label>
     <input type="text" name="title" required
            placeholder="VD: khuyến mãi cà phê mùa hè, mua 1 tặng 1 cuối tuần"
@@ -31,10 +31,48 @@
         </select>
       </div>
     </div>
+    {% if provider == 'antigravity_cli' %}
+    <fieldset class="config-box">
+      <legend>Ảnh minh họa</legend>
+      <label class="check-row">
+        <input id="generate-image" type="checkbox" name="generate_image" checked>
+        Tạo ảnh minh họa bằng Antigravity
+      </label>
+      <div id="image-options" class="grid2">
+        <div>
+          <label for="image-ratio">Tỷ lệ</label>
+          <select id="image-ratio" name="image_aspect_ratio">
+            <option value="4:5" selected>4:5 — Facebook mobile</option>
+            <option value="1:1">1:1 — Vuông</option>
+            <option value="16:9">16:9 — Ngang</option>
+          </select>
+        </div>
+        <div>
+          <label for="image-style">Phong cách</label>
+          <select id="image-style" name="image_style">
+            <option value="auto">Tự động</option>
+            <option value="product">Ảnh sản phẩm</option>
+            <option value="lifestyle">Lifestyle</option>
+            <option value="illustration">Minh họa hiện đại</option>
+            <option value="minimal">Tối giản</option>
+          </select>
+        </div>
+      </div>
+      <label for="visual-brief">Visual brief (tuỳ chọn)</label>
+      <textarea id="visual-brief" name="image_visual_brief" maxlength="500"
+        placeholder="Màu thương hiệu, bối cảnh, sản phẩm bắt buộc…"></textarea>
+    </fieldset>
+    {% endif %}
     <input type="hidden" name="language" value="vi">
     <p style="margin-top:18px;"><button class="btn big" type="submit">✍️ Nhờ AI viết</button></p>
   </form>
 </div>
 <div class="note">💡 AI viết bằng tài khoản ChatGPT/Gemini/Claude bạn <b>đã trả phí hằng tháng</b> —
 không nhập thẻ, không tính tiền theo lượt. Bài viết ra luôn cần <b>bạn duyệt</b> trước khi đăng.</div>
+<script>
+const imageToggle = document.getElementById('generate-image');
+if (imageToggle) imageToggle.addEventListener('change', () => {
+  document.getElementById('image-options').hidden = !imageToggle.checked;
+});
+</script>
 {% endblock %}

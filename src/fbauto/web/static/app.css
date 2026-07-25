@@ -153,3 +153,15 @@ details.guide > summary::-webkit-details-marker { display:none; }
   border:1px solid var(--border); border-radius:10px; padding:4px 14px 14px; margin-top:16px;
 }
 .config-box legend { font-weight:700; padding:0 7px; }
+/* Review workspace and responsive controls */
+.review-layout{display:grid;grid-template-columns:minmax(0,58fr) minmax(320px,42fr);gap:24px;align-items:start}
+.review-layout>div:first-child{position:sticky;top:84px}
+.post-body{min-height:420px;font-size:17px;line-height:1.65;max-height:70vh}
+.fb-image{display:block;width:100%;max-height:620px;object-fit:cover;aspect-ratio:4/5}
+.counter{font-size:.9rem;color:var(--muted,#667085)}
+.check-row{display:flex;align-items:center;gap:10px;min-height:44px}
+.check-row input{width:auto}
+button:disabled,.btn:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:959px){.review-layout{grid-template-columns:1fr}.review-layout>div:first-child{position:static}}
+@media(max-width:639px){.post-body{min-height:300px}.grid2{grid-template-columns:1fr}.review-layout{gap:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

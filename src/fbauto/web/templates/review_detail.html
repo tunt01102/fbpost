@@ -5,8 +5,17 @@
 <h1>Bài #{{ post.id }}
   <span class="pill {{ post.status }}">{{ STATUS_LABELS_VI.get(post.status, post.status) }}</span></h1>
 {% if post.review_note %}<div class="note">📝 {{ post.review_note }}</div>{% endif %}
+{% if post.image_status in ['failed', 'interrupted'] %}
+<div class="warn">{{ post.image_message or 'Ảnh chưa tạo được. Bạn có thể thử lại.' }}</div>
+{% endif %}
+{% if post.validation_reasons %}
+<div class="warn"><b>Chưa thể duyệt/đăng:</b> {{ post.validation_reasons|join('; ') }}</div>
+{% endif %}
+{% if post.validation_warnings %}
+<div class="note">{{ post.validation_warnings|join('; ') }}</div>
+{% endif %}
 
-<div class="grid2">
+<div class="review-layout">
   <!-- TRÁI: xem trước giống Facebook -->
   <div>
     <h3>Xem trước (giống Facebook)</h3>
@@ -16,15 +25,12 @@
         <div><div class="page-name">Trang của bạn</div>
           <div class="sub">Vừa xong · 🌐</div></div>
       </div>
-      <div class="content">{{ post.body }}{% if post.cta %}
-
-{{ post.cta }}{% endif %}
-{% if post.hashtags %}
-<span class="hashtags">{% for t in post.hashtags %}#{{ t }} {% endfor %}</span>{% endif %}</div>
+      <div class="content" id="facebook-preview">{{ post.payload }}</div>
+      {% if post.image_path %}<img class="fb-image" src="/review/{{ post.id }}/image?v={{ post.image_path|urlencode }}" alt="{{ post.alt_text or '' }}">{% endif %}
       <div class="actions"><span>👍 Thích</span><span>💬 Bình luận</span><span>↪️ Chia sẻ</span></div>
     </div>
-    {% if post.image_prompt %}<p class="muted">🖼️ Gợi ý ảnh: {{ post.image_prompt }}</p>{% endif %}
-    {% if post.image_path %}<p class="muted">Ảnh đính kèm: {{ post.image_path }}</p>{% endif %}
+    <p class="counter"><span id="payload-count">{{ post.payload_chars }}</span>/2.200 ký tự ·
+      <span id="tag-count">{{ post.hashtags|length }}</span>/5 hashtag</p>
   </div>
 
   <!-- PHẢI: sửa + hành động -->
@@ -50,18 +56,30 @@
     </form>
     {% endif %}
 
-    <form method="post" action="/review/{{ post.id }}/edit">
-      <label>Hook (dòng đầu)</label>
-      <input type="text" name="hook" value="{{ post.hook or '' }}">
+    <form method="post" action="/review/{{ post.id }}/edit" data-dirty-form>
       <label>Nội dung</label>
-      <textarea name="body" required>{{ post.body }}</textarea>
+      <textarea class="post-body" id="post-body" name="body" required>{{ post.body }}</textarea>
       <label>Hashtag (cách nhau bởi dấu cách)</label>
       <input type="text" name="hashtags" value="{{ post.hashtags|join(' ') }}">
       <label>Lời kêu gọi (CTA)</label>
       <input type="text" name="cta" value="{{ post.cta or '' }}">
       <input type="hidden" name="image_path" value="{{ post.image_path or '' }}">
-      <input type="hidden" name="alt_text" value="{{ post.alt_text or '' }}">
+      <label for="alt-text">Mô tả ảnh (alt text)</label>
+      <input id="alt-text" name="alt_text" value="{{ post.alt_text or '' }}">
+      <label for="image-prompt">Prompt ảnh</label>
+      <textarea id="image-prompt" name="image_prompt">{{ post.image_prompt or '' }}</textarea>
       <p><button class="btn" type="submit">💾 Lưu chỉnh sửa</button></p>
+    </form>
+
+    <form method="post" action="/review/{{ post.id }}/generate-image">
+      <div class="grid2"><div><label>Tỷ lệ cho lần tạo tiếp</label>
+        <select name="image_aspect_ratio"><option>4:5</option><option>1:1</option><option>16:9</option></select>
+      </div><div><label>Phong cách</label><select name="image_style">
+        <option value="auto">Tự động</option><option value="product">Ảnh sản phẩm</option>
+        <option value="lifestyle">Lifestyle</option><option value="illustration">Minh họa</option>
+        <option value="minimal">Tối giản</option></select></div></div>
+      <label>Visual brief</label><textarea name="image_visual_brief" maxlength="500"></textarea>
+      <button class="btn amber" type="submit">Tạo lại ảnh</button>
     </form>
 
     <h3>✨ Nhờ AI viết lại theo góp ý</h3>
@@ -82,7 +100,7 @@
     <hr>
     <h3>Quyết định</h3>
     <form method="post" action="/review/{{ post.id }}/approve" class="inline">
-      <button class="btn green" type="submit">✅ Duyệt</button>
+      <button class="btn green" type="submit" {{ 'disabled' if not post.validation_passed else '' }}>✅ Duyệt</button>
     </form>
     <form method="post" action="/review/{{ post.id }}/reject" class="inline"
           onsubmit="return confirm('Bỏ bài này?');">
@@ -127,8 +145,29 @@
     {% endif %}
     <form method="post" action="/review/{{ post.id }}/publish-now"
           onsubmit="return confirm({% if dry_run %}'Chế độ NHÁP đang bật — đây chỉ là đăng thử, KHÔNG lên Facebook. Tiếp tục?'{% else %}'Đăng bài này NGAY lên Facebook?'{% endif %});">
-      <button class="btn" type="submit">🚀 Đăng ngay</button>
+      <button class="btn" type="submit" {{ 'disabled' if not post.validation_passed else '' }}>🚀 Đăng ngay</button>
     </form>
   </div>
 </div>
+<script>
+const form = document.querySelector('[data-dirty-form]');
+let dirty = false;
+if (form) {
+  form.addEventListener('input', () => dirty = true);
+  form.addEventListener('submit', () => dirty = false);
+  addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; }});
+}
+const body = document.getElementById('post-body');
+function updateCount() {
+  if (!body) return;
+  const cta = form.elements.cta.value.trim();
+  const tags = form.elements.hashtags.value.trim().split(/[,\s]+/).filter(Boolean);
+  const payload = [body.value.trim(), cta, tags.map(t => '#' + t.replace(/^#/, '')).join(' ')]
+    .filter(Boolean).join('\n\n');
+  document.getElementById('payload-count').textContent = payload.length;
+  document.getElementById('tag-count').textContent = tags.length;
+  document.getElementById('facebook-preview').textContent = payload;
+}
+if (form) form.addEventListener('input', updateCount);
+</script>
 {% endblock %}

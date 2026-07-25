@@ -135,6 +135,14 @@ class ReviewConfig(BaseModel):
     autogate_min_score: int = 70
 
 
+class ImageGenerationConfig(BaseModel):
+    enabled_default: bool = True
+    timeout_seconds: int = 300
+    default_aspect_ratio: str = "4:5"
+    default_style: str = "auto"
+    max_output_bytes: int = 15 * 1024 * 1024
+
+
 class SchedulerConfig(BaseModel):
     timezone: str = "Asia/Ho_Chi_Minh"
     min_hours_between_posts: int = 6
@@ -153,6 +161,7 @@ class AppConfig(BaseModel):
     dry_run: bool = True
     llm: LLMConfig = Field(default_factory=LLMConfig)
     review: ReviewConfig = Field(default_factory=ReviewConfig)
+    image_generation: ImageGenerationConfig = Field(default_factory=ImageGenerationConfig)
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
 
 

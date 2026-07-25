@@ -37,15 +37,23 @@
           <label>Model viết bài
             <span class="tip" tabindex="0" data-tip="Để trống là Auto: Antigravity tự chọn model tốt nhất mà tài khoản Ultra của bạn được cấp. Chỉ nhập đúng tên/slug hiện trong lệnh “agy models”.">ⓘ</span>
           </label>
-          <input type="text" name="antigravity_model"
-                 value="{{ agy_cfg.draft_model if agy_cfg else '' }}"
-                 placeholder="Để trống = Auto (khuyên dùng)">
+          <select id="antigravity-model" name="antigravity_model">
+            <option value="">Auto (Khuyên dùng)</option>
+            {% if agy_cfg and agy_cfg.draft_model and agy_cfg.draft_model not in model_catalog.models %}
+            <option value="{{ agy_cfg.draft_model }}" selected>Model cũ — hiện không khả dụng: {{ agy_cfg.draft_model }}</option>
+            {% endif %}
+            {% for model in model_catalog.models %}<option value="{{ model }}" {{ 'selected' if agy_cfg and agy_cfg.draft_model == model else '' }}>{{ model }}</option>{% endfor %}
+          </select>
         </div>
         <div>
           <label>Model tác vụ phụ</label>
-          <input type="text" name="antigravity_cheap_model"
-                 value="{{ agy_cfg.cheap_model if agy_cfg else '' }}"
-                 placeholder="Để trống = giống model viết bài">
+          <select id="antigravity-secondary-model" name="antigravity_cheap_model">
+            <option value="">Auto (Khuyên dùng)</option>
+            {% if agy_cfg and agy_cfg.cheap_model and agy_cfg.cheap_model not in model_catalog.models %}
+            <option value="{{ agy_cfg.cheap_model }}" selected>Model cũ — hiện không khả dụng: {{ agy_cfg.cheap_model }}</option>
+            {% endif %}
+            {% for model in model_catalog.models %}<option value="{{ model }}" {{ 'selected' if agy_cfg and agy_cfg.cheap_model == model else '' }}>{{ model }}</option>{% endfor %}
+          </select>
         </div>
         <div>
           <label>Thời gian chờ tối đa (giây)</label>
@@ -55,6 +63,8 @@
       </div>
       <p class="muted">“Google AI Ultra” là gói thuê bao. Tên model thay đổi theo đợt phát hành;
         chạy <code>agy models</code> để xem model tài khoản đang được dùng.</p>
+      <p><button id="reload-models" class="btn gray" type="button">Tải lại danh sách</button>
+      <span id="model-status" class="muted">{{ model_catalog.error or '' }}</span></p>
     </fieldset>
 
     <p><button class="btn" type="submit">💾 Lưu cấu hình &amp; đăng nhập nếu cần</button></p>
@@ -230,4 +240,21 @@
     <p><button class="btn" type="submit">💾 Lưu cài đặt chung</button></p>
   </form>
 </div>
+<script>
+document.getElementById('reload-models')?.addEventListener('click', async function () {
+  this.disabled = true;
+  const status = document.getElementById('model-status');
+  status.textContent = 'Đang tải…';
+  try {
+    const data = await fetch('/api/antigravity/models?refresh=1').then(r => r.json());
+    for (const id of ['antigravity-model', 'antigravity-secondary-model']) {
+      const select = document.getElementById(id), current = select.value;
+      select.replaceChildren(new Option('Auto (Khuyên dùng)', ''));
+      data.models.forEach(m => select.add(new Option(m, m, false, m === current)));
+    }
+    status.textContent = data.error || `Đã tải ${data.models.length} model.`;
+  } catch (_) { status.textContent = 'Không tải được danh sách model.'; }
+  this.disabled = false;
+});
+</script>
 {% endblock %}

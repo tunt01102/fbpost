@@ -29,6 +29,13 @@ review:
   require_human_approval: true   # BẮT BUỘC người duyệt (an toàn) — không tự đăng khi chưa duyệt
   autogate_min_score: 70
 
+image_generation:
+  enabled_default: true
+  timeout_seconds: 300
+  default_aspect_ratio: "4:5"
+  default_style: auto
+  max_output_bytes: 15728640
+
 scheduler:
   timezone: Asia/Ho_Chi_Minh
   min_hours_between_posts: 6
