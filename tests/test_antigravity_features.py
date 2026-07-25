@@ -72,3 +72,48 @@ def test_post_image_lock_returns_existing_job():
     assert locks.claim(1, "b") == "a"
     locks.release(1, "a")
     assert locks.claim(1, "b") is None
+
+
+def test_generator_accepts_safe_svg_path_from_antigravity_stdout(tmp_path, monkeypatch):
+    from fbauto.config import get_config
+
+    cfg = get_config()
+    old = cfg.image_dir
+    cfg.image_dir = str(tmp_path / "images")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    scratch = Path.home() / ".gemini" / "antigravity-cli" / "scratch"
+    scratch.mkdir(parents=True, exist_ok=True)
+    svg = scratch / "fbauto-test-safe.svg"
+    svg.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">'
+        '<rect width="10" height="10" fill="#167"/></svg>',
+        encoding="utf-8",
+    )
+
+    def runner(*args, **kwargs):
+        return subprocess.CompletedProcess(args[0], 0, str(svg), "")
+
+    try:
+        result = AntigravityImageGenerator(runner).generate(
+            ImageGenerationRequest(11, "minh họa")
+        )
+        assert result.ok
+        assert result.image_path and result.image_path.endswith(".png")
+        with Image.open(result.image_path) as rendered:
+            assert rendered.size == (1080, 1350)
+    finally:
+        svg.unlink(missing_ok=True)
+        cfg.image_dir = old
+
+
+def test_generator_reports_headless_permission_denial(tmp_path):
+    def runner(*args, **kwargs):
+        return subprocess.CompletedProcess(
+            args[0], 0, 'a tool required the "command" permission', ""
+        )
+
+    result = AntigravityImageGenerator(runner).generate(
+        ImageGenerationRequest(12, "minh họa")
+    )
+    assert not result.ok
+    assert result.error_code == "permission_denied"
